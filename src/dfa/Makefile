@@ -1,17 +1,18 @@
-MYLIBPATH=/home/sujit/My-Downloads/source/jflex-1.6.0/lib
-
+#makefile for windows
+MYLIBPATH=E:\\documents\\iiit\\StaBL-code\\statechart-verification\\src\\dfa\\lib
+#export Path:=$(MYLIBPATH);$(Path)
 Analyser : Analyser.java Lexer.java sym.java Parser.java ast/*.java
 	if [ ! -d classes ]; then \
 		mkdir classes; \
 	fi;
-	javac -Xlint:-unchecked -d classes *.java ast/*.java -cp ${MYLIBPATH}/java-cup-11a.jar:${MYLIBPATH}/jflex-1.6.0.jar:ast:./;
+	javac -Xlint:-unchecked -d classes *.java ast/*.java -cp "$(MYLIBPATH)\\java-cup-11a.jar;${MYLIBPATH}\\jflex-1.6.0.jar;ast;./;.;"
 
 sym.java : parser.cup
-	java -jar ${MYLIBPATH}/java-cup-11a.jar -parser Parser -dump < parser.cup
+	java -jar $(MYLIBPATH)\\java-cup-11a.jar -parser Parser -dump < parser.cup
 
 Lexer.java : lexer.flex
-	java -jar ${MYLIBPATH}/jflex-1.6.0.jar lexer.flex
+	java -jar $(MYLIBPATH)\\jflex-1.6.0.jar lexer.flex
 
 clean:
 	rm Parser.java sym.java Lexer.java
-	rm -rf classes/*
+	rm -rf classes\\*

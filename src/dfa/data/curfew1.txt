@@ -1,123 +1,903 @@
-statechart Student {
+statechart Curfew { 
 
+  
 
-  types {
-    type t1<| |>; // no type parameters
-    type list<| a |>; // with one type parameter
-    type map<| a, b |>; // with multiple type parameters
-  }
+  
 
-  events {
-    eLogin;
-    eLogout;
-    eSetRoom;
-    eViewDetails;
-    eDoneSetting;
-    eDoneViewing;
-  }
+  types { 
 
-  students : map<| int, string |>;
+    type RequestStatus<| |>; 
 
-  rooms : map<| int, int |>;
+    type RequestType<| |>; 
 
+    //type UserType<| |>; going to become integer admin=0, student=1 
 
-  entry : {}
-  exit  : {}
+    type LogType<| |>; 
 
-  functions {
-    put_map<| A, B |>(amap : map<| A, B |>, k : A, v : B) : map<| A, B |>;
-    get_map<| A, B |>(amap : map<| A, B |>, k : A) : B;
-  }
+     
 
-  state LoggedOut {
-    user #     : int;
-    password # : string;  
-  }
+    type t1<| |>; // no type parameters 
 
-  state LoggedIn {
+    type list<| a |>; // with one type parameter 
 
-    loggedinUser : int;
+    type map<| a, b |>; // with multiple type parameters 
 
-    entry : {}
-    exit  : {}
+    struct Duration { 
 
-    state Dashboard {
+    startTime : int; 
 
-    }
+    endTime : int; 
 
-    state SetRoom {
-      room # : int;
+    } 
 
-      entry : {}
-      exit  : { put_map <| int, int |>(rooms, loggedinUser, room); }
-    }
+     
 
-    state ViewDetails {
-      student : int;
-      room    : int;
+       
 
-      entry : {
-        student := loggedinUser;
-        room    := get_map <| int, int |>(rooms, loggedinUser);
-          // possible access to undefined value: It is possible for this call 
-          // to get_map to fail if there is no entry in 
-          // rooms (map<| int, int |>) with key = loggedinUser.
-      }
-      exit : {}
-    }
+  
 
-    transition tsetroom {
-      source      : Student.LoggedIn.Dashboard;
-      destination : Student.LoggedIn.SetRoom;
-      trigger     : eSetRoom;
-      guard       : true;
-      action      : {}
-    }
+  struct User { 
 
+    username : string; 
 
-    transition tviewdetails {
-      source      : Student.LoggedIn.Dashboard;
-      destination : Student.LoggedIn.ViewDetails;
-      trigger     : eViewDetails;
-      guard       : true;
-      action      : {}
-    }
+    password : string; 
 
+    userType : int; 
 
-    transition tsetroom_done {
-      source      : Student.LoggedIn.SetRoom;
-      destination : Student.LoggedIn.Dashboard;
-      trigger     : eDoneSetting;
-      guard       : true;
-      action      : {}
-    }
+  } 
 
+  struct Request { 
 
-    transition tviewdetails_done {
-      source      : Student.LoggedIn.ViewDetails;
-      destination : Student.LoggedIn.Dashboard;
-      trigger     : eDoneViewing;
-      guard       : true;
-      action      : {}
-    }
-  }
+    requester : User; 
 
-  transition tlogin {
-    source      : Student.LoggedOut;
-    destination : Student.LoggedIn;
-    trigger     : eLogin;
-    guard       : get_map <| int, string |>(students, Student.LoggedOut.user) = Student.LoggedOut.password;
-    action      : Student.LoggedIn.loggedinUser := Student.LoggedOut.user;
-  }
+    team : list<|string|>; 
 
-  transition tlogout {
-    source      : Student.LoggedIn;
-    destination : Student.LoggedOut;
-    trigger     : eLogout;
-    guard       : true;
+    requestType : int; //CURFEW=0 | CORECURFEW=1 | VACATION=2 
+
+    status : int; //PENDING=0 | APPROVED=1 | REJECTED=2 
+
+    } 
+
+  
+
+  } 
+
+   events { 
+
+    eLogin; 
+
+    eLogout; 
+
+    eSetRoom; 
+
+    eViewDetails; 
+
+    eDoneSetting; 
+
+    eDoneViewing; 
+
+    eRegister; 
+
+    select_register; 
+
+    pr_select; 
+
+    cr_select; 
+
+    rr_select; 
+
+    prsel_select; 
+
+    prsel_approve; 
+
+    prsel_reject; 
+
+    curfew_submit; 
+
+    core_curfew_submit; 
+
+    vacation_submit; 
+
+    curfew_select; 
+
+    core_curfew_select; 
+
+    vacation_select; 
+
+  } 
+
+  students : map<| int, string |>; 
+
+  userType :int; // admin=0, student=1 
+
+  rooms : map<| int, int |>; 
+
+  registeredUsers : map<|string, User|>; 
+
+  loggedinUser : string; 
+
+  requests : list<|Request|>; 
+
+  nulluser:User; 
+
+  
+
+  
+
+  
+
+  entry : {} 
+
+  exit  : {} 
+
+   
+
+functions { 
+
+    put_map<| A, B |>(amap : map<| A, B |>, k : A, v : B) : map<| A, B |>; 
+
+    get_map<| A, B |>(amap : map<| A, B |>, k : A) : B; 
+
+    get_sublist<|A,B|>(alist : list<|A|>, query : B) : list<|A|>; 
+
+    push_list<|A,B|>(alist : list<|A|>, n : B) : list<|A|>; 
+
+    get_random_sublist<|A|>(alist:list<|A|>):list<|A|>; 
+
+    approve_request_list<||>(rlist:list<|Request|>):boolean; 
+
+    reject_request_list<||>(rlist:list<|Request|>):boolean; 
+
+  } 
+
+   
+
+  state LoggedOut { 
+
+    user #     : int; 
+
+    password # : string;   
+
+  } 
+
+   state registration { 
+
+    user : User; 
+
+    userName #: string; 
+
+    password#: string; 
+
+    usertype#:int; 
+
+    exit:{ 
+
+     user.username=userName; 
+
+     user.userType=usertype; 
+
+     user.password=password; 
+
+    } 
+
+  } 
+
+  
+
+  state LoggedIn { 
+
+    loguser:User; 
+
+    loggedinUser : int; 
+
+    loggedinUsertype : int; 
+
+    entry : {} 
+
+    exit  : {} 
+
+     
+
+state AdminDashboard{   
+
+    state Dashboard { 
+
+  
+
+    } 
+
+  
+
+    state SetRoom { 
+
+      room # : int; 
+
+      entry : {} 
+
+      exit  : { put_map <| int, int |>(rooms, loggedinUser, room); } 
+
+    } 
+
+  
+
+    state ViewDetails { 
+
+      student : int; 
+
+      room    : int; 
+
+      entry : { 
+
+        student := loggedinUser; 
+
+        room    := get_map <| int, int |>(rooms, loggedinUser); 
+
+          // possible access to undefined value: It is possible for this call  
+
+          // to get_map to fail if there is no entry in  
+
+          // rooms (map<| int, int |>) with key = loggedinUser. 
+
+      } 
+
+      exit : {} 
+
+    } 
+
+    state view_requests { 
+
+      state pending_requests { 
+
+        pr :  list<|Request|>; 
+
+        prsel: list<|Request|>; 
+
+    pending_flag:int; 
+
+    entry: {      
+
+      pending_flag:=0; 
+
+      pr:=get_sublist<|Request,int|> (requests,pending_flag); 
+
+         // pr := [r.requester for r in requests if r.status = PENDING]; // pr contains the requesters whose status is PENDING. 
+
+        } 
+
+     } 
+
+       
+
+      state closed_requests { 
+
+         cr: list<|Request|>; 
+
+     approved_flag:int; 
+
+     entry:{ 
+
+        approved_flag:=1; 
+
+        cr:=get_sublist<|Request,int|> (requests,approved_flag); 
+
+     } 
+
+      } 
+
+  
+
+      state rejected_requests { 
+
+     rr: list<|Request|>; 
+
+     rejected_flag:int; 
+
+     entry:{ 
+
+        rejected_flag:=2; 
+
+        rr:=get_sublist<|Request,int|> (requests,rejected_flag); 
+
+     } 
+
+      } 
+
+      transition pr_select_pr{ 
+
+        source:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+    destination:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+    trigger:prsel_select; 
+
+    guard:true; 
+
+    action:{ 
+
+        Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel:=get_random_sublist<|Request|>(Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pr); 
+
+    } 
+
+      } 
+
+      transition pr_approve_pr{ 
+
+        source:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+    destination:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+    trigger:prsel_approve; 
+
+    guard:true; 
+
+    action:{ 
+
+        Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel:=get_random_sublist<|Request|>(Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pr); 
+
+        approve_request_list<||>(Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel); 
+
+        Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pr:=get_sublist<|Request,int|> (requests,Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pending_flag); 
+
+  
+
+    } 
+
+      } 
+
+      transition pr_reject_pr{ 
+
+        source:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+    destination:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+    trigger:prsel_reject; 
+
+    guard:true; 
+
+    action:{ 
+
+        Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel:=get_random_sublist<|Request|>(Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pr); 
+
+        reject_request_list<||>(Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel); 
+
+        Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pr:=get_sublist<|Request,int|> (requests,Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pending_flag); 
+
+  
+
+    } 
+
+      } 
+
+      transition pr_cr { 
+
+        source : Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+        destination : Curfew.LoggedIn.AdminDashboard.view_requests.closed_requests; 
+
+  
+
+        trigger: cr_select; 
+
+        guard: true; 
+
+        action : {} 
+
+      } 
+
+  
+
+      transition pr_rr { 
+
+        source : Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+        destination : Curfew.LoggedIn.AdminDashboard.view_requests.rejected_requests; 
+
+  
+
+        trigger: rr_select; 
+
+        guard: true; 
+
+        action : {} 
+
+      } 
+
+  
+
+      transition cr_pr { 
+
+        source : Curfew.LoggedIn.AdminDashboard.view_requests.closed_requests; 
+
+        destination : Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+  
+
+        trigger: pr_select; 
+
+        guard: true; 
+
+        action : {} 
+
+      } 
+
+  
+
+      transition cr_rr { 
+
+        source : Curfew.LoggedIn.AdminDashboard.view_requests.closed_requests; 
+
+        destination : Curfew.LoggedIn.AdminDashboard.view_requests.rejected_requests; 
+
+  
+
+        trigger: rr_select; 
+
+        guard: true; 
+
+        action : {} 
+
+      } 
+
+  
+
+      transition rr_pr { 
+
+        source : Curfew.LoggedIn.AdminDashboard.view_requests.rejected_requests; 
+
+        destination : Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+  
+
+        trigger: pr_select; 
+
+        guard: true; 
+
+        action : {} 
+
+      } 
+
+  
+
+      transition rr_cr { 
+
+        source : Curfew.LoggedIn.AdminDashboard.view_requests.rejected_requests; 
+
+        destination : Curfew.LoggedIn.AdminDashboard.view_requests.closed_requests; 
+
+  
+
+        trigger: cr_select; 
+
+        guard: true; 
+
+        action : {} 
+
+      } 
+
+    } 
+
+   
+
+  
+
+    transition tsetroom { 
+
+      source      : Curfew.LoggedIn.AdminDashboard.Dashboard; 
+
+      destination : Curfew.LoggedIn.AdminDashboard.SetRoom; 
+
+      trigger     : eSetRoom; 
+
+      guard       : Curfew.LoggedIn.loggedinUsertype=1; 
+
+      action      : {} 
+
+    } 
+
+  
+
+  
+
+    transition tviewdetails { 
+
+      source      : Curfew.LoggedIn.AdminDashboard.Dashboard; 
+
+      destination : Curfew.LoggedIn.AdminDashboard.ViewDetails; 
+
+      trigger     : eViewDetails; 
+
+      guard       : Curfew.LoggedIn.loggedinUsertype=1; 
+
+      action      : {} 
+
+    } 
+
+  
+
+  
+
+    transition tsetroom_done { 
+
+      source      : Curfew.LoggedIn.AdminDashboard.SetRoom; 
+
+      destination : Curfew.LoggedIn.AdminDashboard.Dashboard; 
+
+      trigger     : eDoneSetting; 
+
+      guard       : true; 
+
+      action      : {} 
+
+    } 
+
+  
+
+  
+
+    transition tviewdetails_done { 
+
+      source      : Curfew.LoggedIn.AdminDashboard.ViewDetails; 
+
+      destination : Curfew.LoggedIn.AdminDashboard.Dashboard; 
+
+      trigger     : eDoneViewing; 
+
+      guard       : true; 
+
+      action      : {} 
+
+    } 
+
+  } 
+
+  state student_dashboard { 
+
+    
+
+    state init { 
+
+    
+
+    } 
+
+  
+
+    state request_curfew { 
+
+      request : Request; 
+
+      teamlist # :string; 
+
+      duration #: int; 
+
+      reason #:int; 
+
+      pending_flag:int; 
+
+      entry:{ 
+
+      pending_flag:=0; 
+
+      request.requester:=Curfew.LoggedIn.loguser; 
+
+      request.requestType:=pending_flag; 
+
+      } 
+
+      exit:{ 
+
+      push_list<|Request,Request|>(requests,request); 
+
+      } 
+
+    } 
+
+  
+
+    state request_core_curfew { 
+
+      request : Request; 
+
+      teamlist # :string; 
+
+      duration #: int; 
+
+      reason #:int; 
+
+      corecurfew_flag:int; 
+
+      entry:{ 
+
+      corecurfew_flag:=1; 
+
+      request.requester:=Curfew.LoggedIn.loguser; 
+
+      request.requestType:=corecurfew_flag; 
+
+      } 
+
+      exit:{ 
+
+      push_list<|Request,Request|>(requests,request); 
+
+      } 
+
+  
+
+    } 
+
+  
+
+    state request_vacation { 
+
+      request : Request; 
+
+      teamlist # :string; 
+
+      duration #: int; 
+
+      reason #:int; 
+
+      vacation_flag:int; 
+
+      entry:{ 
+
+      vacation_flag:=2; 
+
+      request.requester:=Curfew.LoggedIn.loguser; 
+
+      request.requestType:=vacation_flag; 
+
+      } 
+
+      exit:{ 
+
+      push_list<|Request,Request|>(requests,request); 
+
+      } 
+
+      
+
+    } 
+
+  
+
+    transition init_curfew { 
+
+      source : Curfew.LoggedIn.student_dashboard.init; 
+
+      destination : Curfew.LoggedIn.student_dashboard.request_curfew; 
+
+  
+
+      trigger: curfew_select; 
+
+      guard: true; 
+
+      action : {} 
+
+    } 
+
+  
+
+    transition init_core_curfew { 
+
+      source : Curfew.LoggedIn.student_dashboard.init; 
+
+      destination : Curfew.LoggedIn.student_dashboard.request_core_curfew; 
+
+  
+
+      trigger: core_curfew_select; 
+
+      guard: true; 
+
+      action : {} 
+
+    } 
+
+  
+
+    transition init_vacation { 
+
+      source : Curfew.LoggedIn.student_dashboard.init; 
+
+      destination : Curfew.LoggedIn.student_dashboard.request_vacation; 
+
+  
+
+      trigger: vacation_select; 
+
+      guard: true; 
+
+      action : {} 
+
+    } 
+
+  
+
+    transition curfew_init_success { 
+
+      source : Curfew.LoggedIn.student_dashboard.request_curfew; 
+
+      destination : Curfew.LoggedIn.student_dashboard.init; 
+
+  
+
+      trigger: curfew_submit; 
+
+      guard: true; 
+
+      action : {  
+
+      push_list<|Request,Request|>(requests,request);  
+
+     // requests.add( (loggedinUser, request_curfew.request)); 
+
+      } 
+
+    } 
+
+  
+
+    transition core_curfew_init_success { 
+
+      source : Curfew.LoggedIn.student_dashboard.request_core_curfew; 
+
+      destination : Curfew.LoggedIn.student_dashboard.init; 
+
+  
+
+      trigger: core_curfew_submit; 
+
+      guard: true; 
+
+      action : { push_list<|Request,Request|>(requests,request); } 
+
+    } 
+
+  
+
+    transition vacation_init_success { 
+
+      source : Curfew.LoggedIn.student_dashboard.request_vacation; 
+
+      destination : Curfew.LoggedIn.student_dashboard.init; 
+
+  
+
+      trigger: vacation_submit; 
+
+      guard: true; 
+
+      action : { push_list<|Request,Request|>(requests,request);  } 
+
+    } 
+
+  } 
+
+   
+
+} 
+
+  transition tlogin_admin { 
+
+    source      : Curfew.LoggedOut; 
+
+    destination : Curfew.LoggedIn.AdminDashboard; 
+
+    trigger     : eLogin; 
+
+    guard       : (get_map <| int, string |>(students, Curfew.LoggedOut.user) = Curfew.LoggedOut.password) && (Curfew.LoggedIn.loguser.userType=0); 
+
     action      : { 
-      Student.LoggedOut.user = 0;
-      Student.LoggedOut.password = "";
-    }
-  }
-}
+
+    Curfew.LoggedIn.loggedinUser := Curfew.LoggedOut.user; 
+
+    Curfew.LoggedIn.loguser := get_map <| string, User |>(registeredUsers,Curfew.LoggedOut.password); 
+
+    Curfew.LoggedIn.loggedinUsertype:=Curfew.LoggedIn.loguser.userType; 
+
+    } 
+
+  } 
+
+transition tlogin_student { 
+
+    source      : Curfew.LoggedOut; 
+
+    destination : Curfew.LoggedIn.student_dashboard; 
+
+    trigger     : eLogin; 
+
+    guard       : (get_map <| int, string |>(students, Curfew.LoggedOut.user) = Curfew.LoggedOut.password) && (Curfew.LoggedIn.loguser.userType=1); 
+
+    action      : { 
+
+    Curfew.LoggedIn.loggedinUser := Curfew.LoggedOut.user; 
+
+    Curfew.LoggedIn.loguser := get_map <| string, User |>(registeredUsers,Curfew.LoggedOut.password); 
+
+    Curfew.LoggedIn.loggedinUsertype:=Curfew.LoggedIn.loguser.userType; 
+
+    } 
+
+  } 
+
+  transition tlogout { 
+
+    source      : Curfew.LoggedIn; 
+
+    destination : Curfew.LoggedOut; 
+
+    trigger     : eLogout; 
+
+    guard       : true; 
+
+    action      : {  
+
+      Curfew.LoggedOut.user = 0; 
+
+      Curfew.LoggedOut.password = ""; 
+
+    } 
+
+  } 
+
+    transition register_success { 
+
+    source : Curfew.registration; 
+
+    destination : Curfew.LoggedOut; 
+
+    trigger : eRegister; 
+
+    guard   : get_map <| string, User |>(registeredUsers,Curfew.registration.userName)=nulluser ; 
+
+     
+
+   action: { 
+
+      put_map <| string, User |>(registeredUsers,Curfew.registration.userName,Curfew.registration.user); 
+
+    } 
+
+  } 
+
+  
+
+  transition register_failure { 
+
+    source : Curfew.registration; 
+
+    destination : Curfew.LoggedOut; 
+
+    trigger : eRegister; 
+
+    guard   : get_map <| string, User |>(registeredUsers,Curfew.registration.userName)!=nulluser ; 
+
+    action      : { } 
+
+  } 
+
+  transition loggedout_register { 
+
+    source : Curfew.LoggedOut; 
+
+    destination : Curfew.registration; 
+
+  
+
+    trigger: select_register; 
+
+    guard: true; 
+
+    action : {} 
+
+  } 
+
+   
+
+} 
+
+ 

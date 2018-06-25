@@ -326,9 +326,9 @@ public class Typechecker {
         b.operator.equals("<")  ||
         b.operator.equals("!=") ||
         b.operator.equals("=") ) {
+		boolean type_set = false; 
 
-      TypeName[] allowedTypes = { new TypeName("int"), new TypeName("string") };
-      boolean type_set = false; 
+      /* TypeName[] allowedTypes = { new TypeName("int"), new TypeName("string") };
       for(TypeName tname : allowedTypes) {
         Type type = this.lookupType(tname);
         if(b.left.getType().equals(type) &&
@@ -337,7 +337,12 @@ public class Typechecker {
           type_set = true;
           break;
         }
-      }
+      } */
+	  
+        if(b.left.getType().equals(b.right.getType())) {
+          b.setType(this.lookupType(new TypeName("boolean")));
+          type_set = true;
+		  }
       if(type_set == false) {
         throw new Exception("typecheckBinaryExpression failed: operand type mismatch between " + b.left + " and " + b.right);
       }
