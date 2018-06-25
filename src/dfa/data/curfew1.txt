@@ -1,20 +1,19 @@
 statechart Curfew { 
 
-  
-
-  
-
   types { 
 
     type RequestStatus<| |>; 
 
     type RequestType<| |>; 
+    
+    type Date<| |>; 
 
+    type Time<| |>; //Non Curfew Time, 10pm to 12am, 12am to 3am, 3am to 6 am
     //type UserType<| |>; going to become integer admin=0, student=1 
 
+    type File<| |>;
+    
     type LogType<| |>; 
-
-     
 
     type t1<| |>; // no type parameters 
 
@@ -37,9 +36,8 @@ statechart Curfew {
   
 
   struct User { 
-    userid:int;
-
-    username : string; 
+ 
+    username : string;  //rollno 
 
     password : string; 
 
@@ -48,20 +46,19 @@ statechart Curfew {
   } 
 
   struct Request { 
+    TicketID: int;
 
     requester : User; 
 
-    team : list<|string|>; 
+    team : list<|User|>; 
 
-    requestType : int; //CURFEW=0 | CORECURFEW=1 | VACATION=2 
+    requestType : RequestType; //CURFEW=0 | CORECURFEW=1 | VACATION=2 
 
     status : int; //PENDING=0 | APPROVED=1 | REJECTED=2 
 
+    proof: File;
     } 
-
-  
-
-  } 
+} 
 
    events { 
 
@@ -95,15 +92,17 @@ statechart Curfew {
 
     curfew_submit; 
 
-    core_curfew_submit; 
+    LateIn_submit; 
 
     vacation_submit; 
 
     curfew_select; 
 
-    core_curfew_select; 
+    LateIn_select; 
 
     vacation_select; 
+    
+    add_student_submit;
 
   } 
 
@@ -115,30 +114,22 @@ statechart Curfew {
 
   registeredUsers : map<|string, User|>; 
 
-  loggedinUser : User; 
-
   requests : list<|Request|>; 
 
   nulluser:User; 
-
-  
-
-  
-
-  
 
   entry : {} 
 
   exit  : {} 
 
-   
-
 functions { 
 
     put_map<| A, B |>(amap : map<| A, B |>, k : A, v : B) : map<| A, B |>; 
 
-    get_map<| A, B |>(amap : map<| A, B |>, k : A) : B; 
+    get_map_key_by_val<|A, B, C|>(amap : map<| A, B |>,v:B):C;
 
+    get_map<| A, B |>(amap : map<| A, B |>, k : A) : B; 
+       
     get_sublist<|A,B|>(alist : list<|A|>, query : B) : list<|A|>; 
 
     push_list<|A,B|>(alist : list<|A|>, n : B) : list<|A|>; 
@@ -149,18 +140,18 @@ functions {
 
     reject_request_list<||>(rlist:list<|Request|>):boolean; 
 
+    sendMail<|Request|>(req:Request):boolean;
   } 
-
-   
 
   state LoggedOut { 
 
     user     : User; 
     username # : string;
     password # : string;
-    //exit:{
+    exit:{
+         user:=get_map <| string, User |>(students, Curfew.LoggedOut.username);
 	//	user=get_map<|string,User|>(username,students);
-	//}	
+	}	
 
   } 
 
@@ -188,13 +179,9 @@ functions {
 
   } 
 
-  
-
   state LoggedIn { 
 
-    loguser:User; 
-
-    loggedinUser : int; 
+    loggedinUser : User; 
 
     loggedinUsertype : int; 
 
@@ -202,17 +189,10 @@ functions {
 
     exit  : {} 
 
-     
-
 state AdminDashboard{   
 
     state Dashboard { 
-
-  
-
     } 
-
-  
 
     state SetRoom { 
 
@@ -220,11 +200,9 @@ state AdminDashboard{
 
       entry : {} 
 
-      exit  : { put_map <| int, int |>(rooms, loggedinUser, room); } 
+      exit  : { put_map <| int, int |>(rooms, get_map_key_by_val<|string,User,int|>(students,loggedinUser), room); } 
 
     } 
-
-  
 
     state ViewDetails { 
 
@@ -234,9 +212,9 @@ state AdminDashboard{
 
       entry : { 
 
-        student := loggedinUser; 
+        student := get_map_key_by_val<|string,User,int|>(students, loggedinUser); 
 
-        room    := get_map <| int, int |>(rooms, loggedinUser); 
+        room    := get_map <| int, int |>(rooms, get_map_key_by_val<|string,User,int|>(students,loggedinUser)); 
 
           // possible access to undefined value: It is possible for this call  
 
@@ -272,8 +250,6 @@ state AdminDashboard{
 
      } 
 
-       
-
       state closed_requests { 
 
          cr: list<|Request|>; 
@@ -289,8 +265,6 @@ state AdminDashboard{
         } 
 
       } 
-
-  
 
     state rejected_requests { 
 
@@ -344,8 +318,6 @@ state AdminDashboard{
 
         Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pr:=get_sublist<|Request,int|> (requests,Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pending_flag); 
 
-  
-
     } 
 
       } 
@@ -368,8 +340,6 @@ state AdminDashboard{
 
         Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pr:=get_sublist<|Request,int|> (requests,Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pending_flag); 
 
-  
-
     } 
 
       } 
@@ -380,8 +350,6 @@ state AdminDashboard{
 
         destination : Curfew.LoggedIn.AdminDashboard.view_requests.closed_requests; 
 
-  
-
         trigger: cr_select; 
 
         guard: true; 
@@ -390,15 +358,11 @@ state AdminDashboard{
 
       } 
 
-  
-
       transition pr_rr { 
 
         source : Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
 
         destination : Curfew.LoggedIn.AdminDashboard.view_requests.rejected_requests; 
-
-  
 
         trigger: rr_select; 
 
@@ -407,8 +371,6 @@ state AdminDashboard{
         action : {} 
 
       } 
-
-  
 
       transition cr_pr { 
 
@@ -416,8 +378,6 @@ state AdminDashboard{
 
         destination : Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
 
-  
-
         trigger: pr_select; 
 
         guard: true; 
@@ -426,15 +386,11 @@ state AdminDashboard{
 
       } 
 
-  
-
       transition cr_rr { 
 
         source : Curfew.LoggedIn.AdminDashboard.view_requests.closed_requests; 
 
         destination : Curfew.LoggedIn.AdminDashboard.view_requests.rejected_requests; 
-
-  
 
         trigger: rr_select; 
 
@@ -444,15 +400,11 @@ state AdminDashboard{
 
       } 
 
-  
-
       transition rr_pr { 
 
         source : Curfew.LoggedIn.AdminDashboard.view_requests.rejected_requests; 
 
         destination : Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
-
-  
 
         trigger: pr_select; 
 
@@ -462,15 +414,11 @@ state AdminDashboard{
 
       } 
 
-  
-
       transition rr_cr { 
 
         source : Curfew.LoggedIn.AdminDashboard.view_requests.rejected_requests; 
 
         destination : Curfew.LoggedIn.AdminDashboard.view_requests.closed_requests; 
-
-  
 
         trigger: cr_select; 
 
@@ -481,10 +429,6 @@ state AdminDashboard{
       } 
 
     } 
-
-   
-
-  
 
     transition tsetroom { 
 
@@ -500,10 +444,6 @@ state AdminDashboard{
 
     } 
 
-  
-
-  
-
     transition tviewdetails { 
 
       source      : Curfew.LoggedIn.AdminDashboard.Dashboard; 
@@ -518,10 +458,6 @@ state AdminDashboard{
 
     } 
 
-  
-
-  
-
     transition tsetroom_done { 
 
       source      : Curfew.LoggedIn.AdminDashboard.SetRoom; 
@@ -535,10 +471,6 @@ state AdminDashboard{
       action      : {} 
 
     } 
-
-  
-
-  
 
     transition tviewdetails_done { 
 
@@ -557,160 +489,104 @@ state AdminDashboard{
   } 
 
   state student_dashboard { 
-
-    
-
-    state init { 
-
-    
-
-    } 
-
-  
+ 
+	state init { 
+ 
+   } 
 
     state request_curfew { 
 
       request : Request; 
 
-      teamlist # :string; 
+      teamlist # :list<|User|>; 
+      student #: User;
+      reason #:string; 
 
-      duration #: int; 
+      type_of_request#:RequestType; 
 
-      reason #:int; 
-
-      pending_flag:int; 
-
+      proof_document# :File; 
       entry:{ 
 
-      pending_flag:=0; 
-
-      request.requester:=Curfew.LoggedIn.loguser; 
-
-      request.requestType:=pending_flag; 
+      request.requester:=Curfew.LoggedIn.loggedinUser; 
 
       } 
 
       exit:{ 
-
+      
+      request.requestType:=type_of_request;
+      
       push_list<|Request,Request|>(requests,request); 
+
+      }
+    state request_LateIn { 
+
+      inTime #: Time;
+
+      curfewLateIn_flag:RequestType; 
+
+      entry:{ 
+ 
+      type_of_request:=curfewLateIn_flag; 
 
       } 
 
     } 
 
-  
+    state request_LateOut { 
 
-    state request_core_curfew { 
+      outTime #: Time;      
 
-      request : Request; 
-
-      teamlist # :string; 
-
-      duration #: int; 
-
-      reason #:int; 
-
-      corecurfew_flag:int; 
+      curfewLateOut_flag:RequestType; 
 
       entry:{ 
-
-      corecurfew_flag:=1; 
-
-      request.requester:=Curfew.LoggedIn.loguser; 
-
-      request.requestType:=corecurfew_flag; 
+ 
+      type_of_request:=curfewLateOut_flag; 
 
       } 
-
-      exit:{ 
-
-      push_list<|Request,Request|>(requests,request); 
-
-      } 
-
-  
 
     } 
-
-  
 
     state request_vacation { 
 
-      request : Request; 
+          inTime #: Time;
 
-      teamlist # :string; 
+          outTime #: Time;    
 
-      duration #: int; 
+          inDate# : Date;
+	  
+          outDate# : Date;
 
-      reason #:int; 
-
-      vacation_flag:int; 
+          vacation_flag:RequestType; 
 
       entry:{ 
 
-      vacation_flag:=2; 
-
-      request.requester:=Curfew.LoggedIn.loguser; 
-
-      request.requestType:=vacation_flag; 
+	     type_of_request:=vacation_flag; 
 
       } 
+  }      
 
-      exit:{ 
+} 
 
-      push_list<|Request,Request|>(requests,request); 
 
-      } 
-
-      
-
-    } 
-
-  
-
-    transition init_curfew { 
+    transition init_LateIn { 
 
       source : Curfew.LoggedIn.student_dashboard.init; 
 
-      destination : Curfew.LoggedIn.student_dashboard.request_curfew; 
+      destination : Curfew.LoggedIn.student_dashboard.request_curfew.request_LateIn; 
 
-  
-
-      trigger: curfew_select; 
+      trigger: LateIn_select; 
 
       guard: true; 
 
       action : {} 
 
     } 
-
-  
-
-    transition init_core_curfew { 
-
-      source : Curfew.LoggedIn.student_dashboard.init; 
-
-      destination : Curfew.LoggedIn.student_dashboard.request_core_curfew; 
-
-  
-
-      trigger: core_curfew_select; 
-
-      guard: true; 
-
-      action : {} 
-
-    } 
-
-  
 
     transition init_vacation { 
 
       source : Curfew.LoggedIn.student_dashboard.init; 
 
-      destination : Curfew.LoggedIn.student_dashboard.request_vacation; 
-
-  
+      destination : Curfew.LoggedIn.student_dashboard.request_curfew.request_vacation; 
 
       trigger: vacation_select; 
 
@@ -720,15 +596,11 @@ state AdminDashboard{
 
     } 
 
-  
-
     transition curfew_init_success { 
 
       source : Curfew.LoggedIn.student_dashboard.request_curfew; 
 
       destination : Curfew.LoggedIn.student_dashboard.init; 
-
-  
 
       trigger: curfew_submit; 
 
@@ -737,52 +609,59 @@ state AdminDashboard{
       action : {  
 
       push_list<|Request,Request|>(requests,request);  
-
+      sendMail<|Request|>(request);
      // requests.add( (loggedinUser, request_curfew.request)); 
 
       } 
 
     } 
 
-  
+    transition LateIn_init_success { 
 
-    transition core_curfew_init_success { 
-
-      source : Curfew.LoggedIn.student_dashboard.request_core_curfew; 
+      source : Curfew.LoggedIn.student_dashboard.request_curfew.request_LateIn; 
 
       destination : Curfew.LoggedIn.student_dashboard.init; 
 
-  
-
-      trigger: core_curfew_submit; 
+      trigger: LateIn_submit; 
 
       guard: true; 
 
-      action : { push_list<|Request,Request|>(requests,request); } 
+      action : { push_list<|Request,Request|>(requests,request);
+      sendMail<|Request|>(request);
+      } 
 
     } 
 
-  
-
     transition vacation_init_success { 
 
-      source : Curfew.LoggedIn.student_dashboard.request_vacation; 
+      source : Curfew.LoggedIn.student_dashboard.request_curfew.request_vacation; 
 
       destination : Curfew.LoggedIn.student_dashboard.init; 
-
-  
 
       trigger: vacation_submit; 
 
       guard: true; 
 
-      action : { push_list<|Request,Request|>(requests,request);  } 
+      action : { push_list<|Request,Request|>(requests,request);
+      sendMail<|Request|>(request);
+      } 
 
     } 
+    transition request_curfew_add_student{
+    
+      source : Curfew.LoggedIn.student_dashboard.request_curfew; 
+
+      destination : Curfew.LoggedIn.student_dashboard.request_curfew;
+
+      trigger: add_student_submit; 
+
+      guard: true; 
+
+      action : { push_list<|User,User|>(teamlist,student);  } 
+    
+    }
 
   } 
-
-   
 
 } 
 
@@ -794,15 +673,15 @@ state AdminDashboard{
 
     trigger     : eLogin; 
 
-    guard       : (get_map <| string, User |>(students, Curfew.LoggedOut.username).password = Curfew.LoggedOut.password) && (Curfew.LoggedIn.loguser.userType=1);
+    guard       : (Curfew.LoggedOut.user.password = Curfew.LoggedOut.password) && (Curfew.LoggedIn.loggedinUser.userType=0);
 
     action      : { 
  
-    Curfew.LoggedIn.loggedinUser := Curfew.LoggedOut.user.userid; 
+    Curfew.LoggedIn.loggedinUser := Curfew.LoggedOut.user; 
 
-    Curfew.LoggedIn.loguser := get_map <| string, User |>(registeredUsers,Curfew.LoggedOut.password); 
+    Curfew.LoggedIn.loggedinUser := get_map <| string, User |>(registeredUsers,Curfew.LoggedOut.password); 
 
-    Curfew.LoggedIn.loggedinUsertype:=Curfew.LoggedIn.loguser.userType; 
+    Curfew.LoggedIn.loggedinUsertype:=Curfew.LoggedIn.loggedinUser.userType; 
 
     } 
 
@@ -816,15 +695,15 @@ transition tlogin_student {
 
     trigger     : eLogin; 
 
-    guard       : true;//((get_map <| string, User |>(students, Curfew.LoggedOut.user.username)).password = Curfew.LoggedOut.password) && (Curfew.LoggedIn.loguser.userType=1); 
+    guard       : (Curfew.LoggedOut.user.password = Curfew.LoggedOut.password) && (Curfew.LoggedIn.loggedinUser.userType=1);
     
 	action      : { 
 
-    Curfew.LoggedIn.loggedinUser := Curfew.LoggedOut.user.userid; 
+    Curfew.LoggedIn.loggedinUser := Curfew.LoggedOut.user; 
 
-    Curfew.LoggedIn.loguser := get_map <| string, User |>(registeredUsers,Curfew.LoggedOut.password); 
+    Curfew.LoggedIn.loggedinUser := get_map <| string, User |>(registeredUsers,Curfew.LoggedOut.password); 
 
-    Curfew.LoggedIn.loggedinUsertype:=Curfew.LoggedIn.loguser.userType; 
+    Curfew.LoggedIn.loggedinUsertype:=Curfew.LoggedIn.loggedinUser.userType; 
 
     } 
 
@@ -860,8 +739,6 @@ transition tlogin_student {
 
     guard   : get_map <| string, User |>(registeredUsers,Curfew.registration.userName)=nulluser ; 
 
-     
-
    action: { 
 
       put_map <| string, User |>(registeredUsers,Curfew.registration.userName,Curfew.registration.user); 
@@ -869,8 +746,6 @@ transition tlogin_student {
     } 
 
   } 
-
-  
 
   transition register_failure { 
 
@@ -892,8 +767,6 @@ transition tlogin_student {
 
     destination : Curfew.registration; 
 
-  
-
     trigger: select_register; 
 
     guard: true; 
@@ -902,8 +775,4 @@ transition tlogin_student {
 
   } 
 
-   
-
-} 
-
- 
+}  
