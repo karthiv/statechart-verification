@@ -37,6 +37,7 @@ statechart Curfew {
   
 
   struct User { 
+    userid:int;
 
     username : string; 
 
@@ -106,7 +107,7 @@ statechart Curfew {
 
   } 
 
-  students : map<| int, string |>; 
+  students : map<| string, User |>; 
 
   userType :int; // admin=0, student=1 
 
@@ -114,7 +115,7 @@ statechart Curfew {
 
   registeredUsers : map<|string, User|>; 
 
-  loggedinUser : string; 
+  loggedinUser : User; 
 
   requests : list<|Request|>; 
 
@@ -154,9 +155,12 @@ functions {
 
   state LoggedOut { 
 
-    user #     : int; 
-
-    password # : string;   
+    user     : User; 
+    username # : string;
+    password # : string;
+    //exit:{
+	//	user=get_map<|string,User|>(username,students);
+	//}	
 
   } 
 
@@ -177,6 +181,8 @@ functions {
      user.userType=usertype; 
 
      user.password=password; 
+	 
+	 //put_map<|User,map<|string, User|>|>(user,registeredUsers);
 
     } 
 
@@ -252,7 +258,7 @@ state AdminDashboard{
 
         prsel: list<|Request|>; 
 
-    pending_flag:int; 
+    pending_flag:int; //there is no notion of constant - so variable is used here, to call get_sublist(Request,Int)
 
     entry: {      
 
@@ -272,7 +278,7 @@ state AdminDashboard{
 
          cr: list<|Request|>; 
 
-     approved_flag:int; 
+     approved_flag:int; //there is no notion of constant - so variable is used here, to call get_sublist(Request,Int)
 
      entry:{ 
 
@@ -280,17 +286,17 @@ state AdminDashboard{
 
         cr:=get_sublist<|Request,int|> (requests,approved_flag); 
 
-     } 
+        } 
 
       } 
 
   
 
-      state rejected_requests { 
+    state rejected_requests { 
 
      rr: list<|Request|>; 
 
-     rejected_flag:int; 
+     rejected_flag:int; //there is no notion of constant - so variable is used here, to call get_sublist(Request,Int)
 
      entry:{ 
 
@@ -300,7 +306,7 @@ state AdminDashboard{
 
      } 
 
-      } 
+    } 
 
       transition pr_select_pr{ 
 
@@ -788,11 +794,11 @@ state AdminDashboard{
 
     trigger     : eLogin; 
 
-    guard       : (get_map <| int, string |>(students, Curfew.LoggedOut.user) = Curfew.LoggedOut.password) && (Curfew.LoggedIn.loguser.userType=0); 
+    guard       : (get_map <| string, User |>(students, Curfew.LoggedOut.username).password = Curfew.LoggedOut.password) && (Curfew.LoggedIn.loguser.userType=1);
 
     action      : { 
-
-    Curfew.LoggedIn.loggedinUser := Curfew.LoggedOut.user; 
+ 
+    Curfew.LoggedIn.loggedinUser := Curfew.LoggedOut.user.userid; 
 
     Curfew.LoggedIn.loguser := get_map <| string, User |>(registeredUsers,Curfew.LoggedOut.password); 
 
@@ -810,11 +816,11 @@ transition tlogin_student {
 
     trigger     : eLogin; 
 
-    guard       : (get_map <| int, string |>(students, Curfew.LoggedOut.user) = Curfew.LoggedOut.password) && (Curfew.LoggedIn.loguser.userType=1); 
+    guard       : true;//((get_map <| string, User |>(students, Curfew.LoggedOut.user.username)).password = Curfew.LoggedOut.password) && (Curfew.LoggedIn.loguser.userType=1); 
+    
+	action      : { 
 
-    action      : { 
-
-    Curfew.LoggedIn.loggedinUser := Curfew.LoggedOut.user; 
+    Curfew.LoggedIn.loggedinUser := Curfew.LoggedOut.user.userid; 
 
     Curfew.LoggedIn.loguser := get_map <| string, User |>(registeredUsers,Curfew.LoggedOut.password); 
 
@@ -836,7 +842,7 @@ transition tlogin_student {
 
     action      : {  
 
-      Curfew.LoggedOut.user = 0; 
+      Curfew.LoggedOut.user = nulluser; 
 
       Curfew.LoggedOut.password = ""; 
 

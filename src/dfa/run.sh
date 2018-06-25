@@ -1,3 +1,7 @@
+#inside classes run the following command
+
+ java -cp ".;ast/*;lib/*" Analyser "E:\documents\iiit\StaBL-code\statechart-verification\src\dfa\data\curfew1.txt"
+
 MYLIBPATH="E:\\documents\\iiit\\StaBL-code\\statechart-verification\\src\\dfa\\lib"
 MYCLASSPATH="classes\\;.;"${MYLIBPATH}"\\java-cup-11a.jar"
 testcases=(
