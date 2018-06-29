@@ -29,12 +29,6 @@ statechart Curfew {
 
     } 
 
-     
-
-       
-
-  
-
   struct User { 
  
     username : string;  //rollno 
@@ -46,8 +40,11 @@ statechart Curfew {
   } 
 
   struct Request { 
-    TicketID: int;
+  
+    TicketID: int; 
 
+	creation_date : Date;
+	
     requester : User; 
 
     team : list<|User|>; 
@@ -83,6 +80,8 @@ statechart Curfew {
     cr_select; 
 
     rr_select; 
+	
+	ar_select;
 
     prsel_select; 
 
@@ -117,6 +116,8 @@ statechart Curfew {
   requests : list<|Request|>; 
 
   nulluser:User; 
+  
+  nulllist :list<|Request|>;
 
   entry : {} 
 
@@ -141,6 +142,8 @@ functions {
     reject_request_list<||>(rlist:list<|Request|>):boolean; 
 
     sendMail<|Request|>(req:Request):boolean;
+	
+	getCurrentDate<||>():Date;
   } 
 
   state LoggedOut { 
@@ -229,6 +232,10 @@ state AdminDashboard{
     } 
 
     state view_requests { 
+	
+	ticketid :int;
+	
+	
 
       state pending_requests { 
 
@@ -236,15 +243,16 @@ state AdminDashboard{
 
         prsel: list<|Request|>; 
 
-    pending_flag:int; //there is no notion of constant - so variable is used here, to call get_sublist(Request,Int)
+		pending_flag:int; //there is no notion of constant - so variable is used here, to call get_sublist(Request,Int)
 
     entry: {      
 
-      pending_flag:=0; 
+		pending_flag:=0; 
 
-      pr:=get_sublist<|Request,int|> (requests,pending_flag); 
+		pr:=get_sublist<|Request,int|> (requests,pending_flag); 
 
-         // pr := [r.requester for r in requests if r.status = PENDING]; // pr contains the requesters whose status is PENDING. 
+		
+        //pr := [r.requester for r in requests if r.status = PENDING]; // pr contains the requesters whose status is PENDING. 
 
         } 
 
@@ -254,18 +262,32 @@ state AdminDashboard{
 
          cr: list<|Request|>; 
 
-     approved_flag:int; //there is no notion of constant - so variable is used here, to call get_sublist(Request,Int)
+		 closed_flag:int; //there is no notion of constant - so variable is used here, to call get_sublist(Request,Int)
 
      entry:{ 
 
-        approved_flag:=1; 
+        closed_flag:=1; 
+
+        cr:=get_sublist<|Request,int|> (requests,closed_flag); 
+
+        } 
+
+      } 
+      state approved_requests { 
+
+         cr: list<|Request|>; 
+
+		 approved_flag:int; //there is no notion of constant - so variable is used here, to call get_sublist(Request,Int)
+
+     entry:{ 
+
+        approved_flag:=2; 
 
         cr:=get_sublist<|Request,int|> (requests,approved_flag); 
 
         } 
 
-      } 
-
+      }
     state rejected_requests { 
 
      rr: list<|Request|>; 
@@ -274,7 +296,7 @@ state AdminDashboard{
 
      entry:{ 
 
-        rejected_flag:=2; 
+        rejected_flag:=3; 
 
         rr:=get_sublist<|Request,int|> (requests,rejected_flag); 
 
@@ -284,7 +306,7 @@ state AdminDashboard{
 
       transition pr_select_pr{ 
 
-        source:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+    source:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
 
     destination:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
 
@@ -308,11 +330,9 @@ state AdminDashboard{
 
     trigger:prsel_approve; 
 
-    guard:true; 
+    guard:{Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel!=nulllist}; 
 
     action:{ 
-
-        Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel:=get_random_sublist<|Request|>(Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pr); 
 
         approve_request_list<||>(Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel); 
 
@@ -330,11 +350,9 @@ state AdminDashboard{
 
     trigger:prsel_reject; 
 
-    guard:true; 
+    guard:{Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel!=nulllist}; 
 
     action:{ 
-
-        Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel:=get_random_sublist<|Request|>(Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.pr); 
 
         reject_request_list<||>(Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel); 
 
@@ -427,6 +445,47 @@ state AdminDashboard{
         action : {} 
 
       } 
+	  
+	  transition ar_cr { 
+
+        source : Curfew.LoggedIn.AdminDashboard.view_requests.approved_requests; 
+
+        destination : Curfew.LoggedIn.AdminDashboard.view_requests.closed_requests; 
+
+        trigger: ar_select; 
+
+        guard: true; 
+
+        action : {} 
+
+      } 
+	  transition ar_rr { 
+
+        source : Curfew.LoggedIn.AdminDashboard.view_requests.approved_requests; 
+
+        destination : Curfew.LoggedIn.AdminDashboard.view_requests.rejected_requests; 
+
+        trigger: ar_select; 
+
+        guard: true; 
+
+        action : {} 
+
+      } 
+	  transition ar_pr { 
+
+        source : Curfew.LoggedIn.AdminDashboard.view_requests.approved_requests; 
+
+        destination : Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+        trigger: ar_select; 
+
+        guard: true; 
+
+        action : {} 
+
+      } 
+	  
 
     } 
 
@@ -497,23 +556,26 @@ state AdminDashboard{
     state request_curfew { 
 
       request : Request; 
-
+     
       teamlist # :list<|User|>; 
-      student #: User;
+      student#: User;
       reason #:string; 
-
       type_of_request#:RequestType; 
 
       proof_document# :File; 
       entry:{ 
 
       request.requester:=Curfew.LoggedIn.loggedinUser; 
-
+        
       } 
 
       exit:{ 
       
       request.requestType:=type_of_request;
+	  
+	  request.reason:=reason;
+	  
+	  request.creation_date:= getCurrentDate<||>();
       
       push_list<|Request,Request|>(requests,request); 
 
