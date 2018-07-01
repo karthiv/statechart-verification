@@ -43,7 +43,7 @@ statechart Curfew {
   
     TicketID: int; 
 
-	creation_date : Date;
+    creation_date : Date;
 	
     requester : User; 
 
@@ -51,9 +51,11 @@ statechart Curfew {
 
     requestType : RequestType; //CURFEW=0 | CORECURFEW=1 | VACATION=2 
 
-    status : int; //PENDING=0 | APPROVED=1 | REJECTED=2 
+    status : int; //PENDING=0 | APPROVED=1 | CLOSED=2 | REJECTED=3 | CANCELLED=4
 
     proof: File;
+    
+    reason : string;
     } 
 } 
 
@@ -93,9 +95,7 @@ statechart Curfew {
 
     LateIn_submit; 
 
-    vacation_submit; 
-
-    curfew_select; 
+    vacation_submit;  
 
     LateIn_select; 
 
@@ -103,6 +103,13 @@ statechart Curfew {
     
     add_student_submit;
 
+    pr_askproof;
+    
+    submitProof;
+    
+    upload_proof;
+    
+    viewMyRequests;
   } 
 
   students : map<| string, User |>; 
@@ -118,6 +125,8 @@ statechart Curfew {
   nulluser:User; 
   
   nulllist :list<|Request|>;
+  
+  nullRequest : Request;
 
   entry : {} 
 
@@ -142,8 +151,12 @@ functions {
     reject_request_list<||>(rlist:list<|Request|>):boolean; 
 
     sendMail<|Request|>(req:Request):boolean;
+    
+    askDocumentProof<|Request|>(rlist:list<|Request|>):boolean;
 	
-	getCurrentDate<||>():Date;
+    uploadDocumentProof<|Request,File|>(r:Request,f:File):boolean;
+    
+    getCurrentDate<||>():Date;
   } 
 
   state LoggedOut { 
@@ -234,10 +247,9 @@ state AdminDashboard{
     state view_requests { 
 	
 	ticketid :int;
-	
-	
 
-      state pending_requests { 
+	
+     state pending_requests { 
 
         pr :  list<|Request|>; 
 
@@ -303,8 +315,25 @@ state AdminDashboard{
      } 
 
     } 
+    
+    transition pr_proof_pr{
+    
+    source:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
 
-      transition pr_select_pr{ 
+    destination:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+
+    trigger:pr_askproof; 
+
+    guard:prsel!=nulllist; 
+    
+    action:{
+               // for each p in prsel p.status:=
+		askDocumentProof<|Request|>(prsel);
+    }
+
+    }
+
+    transition pr_select_pr{ 
 
     source:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
 
@@ -322,15 +351,15 @@ state AdminDashboard{
 
       } 
 
-      transition pr_approve_pr{ 
+    transition pr_approve_pr{ 
 
-        source:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
+    source:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
 
     destination:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests; 
 
     trigger:prsel_approve; 
 
-    guard:{Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel!=nulllist}; 
+    guard:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel!=nulllist; 
 
     action:{ 
 
@@ -350,7 +379,7 @@ state AdminDashboard{
 
     trigger:prsel_reject; 
 
-    guard:{Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel!=nulllist}; 
+    guard:Curfew.LoggedIn.AdminDashboard.view_requests.pending_requests.prsel!=nulllist; 
 
     action:{ 
 
@@ -549,10 +578,29 @@ state AdminDashboard{
 
   state student_dashboard { 
  
-	state init { 
- 
-   } 
+    state init {
+    } 
+    state view_my_requests
+    {
 
+    myrequests:list<|Request|>;
+    
+    selectedRequest# : Request;
+    
+    entry:{
+    
+    myrequests:=get_sublist<|Request,int|>(requests, get_map_key_by_val<|string, User,int|>(students,Curfew.LoggedIn.loggedinUser));
+   
+    }
+    
+    }
+    state upload_curfew_proof{
+    
+    sReq:Request;
+    
+    document#:File;
+    
+    }
     state request_curfew { 
 
       request : Request; 
@@ -562,7 +610,7 @@ state AdminDashboard{
       reason #:string; 
       type_of_request#:RequestType; 
 
-      proof_document# :File; 
+       
       entry:{ 
 
       request.requester:=Curfew.LoggedIn.loggedinUser; 
@@ -628,8 +676,37 @@ state AdminDashboard{
   }      
 
 } 
+    transition init_view_my_requests{
+    
+    source: Curfew.LoggedIn.student_dashboard.init;
+    
+    destination: Curfew.LoggedIn.student_dashboard.view_my_requests;
+    
+    trigger: viewMyRequests;
+    
+    guard: true;
+    
+    action:{}
+    }
 
-
+    transition view_my_requests_upload_curfew_proof{
+    
+    source: Curfew.LoggedIn.student_dashboard.view_my_requests;
+    
+    destination: Curfew.LoggedIn.student_dashboard.upload_curfew_proof;
+    
+    trigger: upload_proof;
+    
+    guard: selectedRequest!=nullRequest;
+    
+    action:{
+	
+	sReq:=selectedRequest;
+        
+	//sReq.proof:=document;
+    }
+    
+    }
     transition init_LateIn { 
 
       source : Curfew.LoggedIn.student_dashboard.init; 
