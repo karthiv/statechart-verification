@@ -1,0 +1,60 @@
+statechart hms{
+types{
+type Date<| |>;
+struct Complaint{
+	id:int;
+	area:string;
+	area:string;
+	type:int;
+	roomNo:int;
+	blockNo:int;
+	startDate:Date;
+	status:string;
+}
+
+}
+
+events{
+}
+entry:{}
+exit:{}
+functions{
+}
+state AdminModule{
+	state AddUser{
+	}
+	state DeleteUser{
+	}
+	state EnableUser{
+	}
+	state DisableUser{
+	}
+	state SearchStudent{
+		state SearchByName{}
+		state SearchByRollNo{}
+	}
+}
+state StudentModule{
+	state MakeRequest{
+		state ChangeRoom{}
+	}
+	state MakeComplaints{
+		compliantPriority#:int;
+		problemStartDate#:Date;
+		complaintArea#:string;
+		state CleaningProblem{}
+		state HotWaterProblem{}
+		state DrinkingWaterProblem{}
+		state ElectricityProblem{}
+		state BrokenChairsBeds{}
+		state WiFiProblem{}
+		state NuisanceProblem{}
+				
+	}
+	state ViewComplaintStatus{}
+	state EscalateComplaint{}
+	
+
+}
+
+}
