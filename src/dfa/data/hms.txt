@@ -21,6 +21,8 @@ statechart hms{
 			username:string;
 			password:string;
 			usertype:int; //admin=1;
+			contactno:string;
+			emailID:string;
 		}
 		struct EscalationPolicy{
 			level1Duration:int;
@@ -33,26 +35,43 @@ statechart hms{
 	}
 	events{
 		eLogin;
+		eAddUser;
+		eDeleteUser;
 	}
 	registeredUsers:map<|string,User|>;
 	admintype:int;
-	studenttype:int;
-	centraladmintype:int;
-	centreheadtype:int;
-	entry:{}
+	studenttype:int; centraladmintype:int; centreheadtype:int; //usertype
+	complaintLaunched:int; 
+	complaintReviewedandPropogated:int; 
+	complaintRejected:int; 
+	complaintAssigned:int; 
+	complaintResolved:int; 
+	complaintAcknowledged:int;
+	entry:{
+			admintype:=1;
+			studenttype:=2;
+			centraladmintype:=3;
+			centreheadtype:=4;
+			complaintLaunched:=1; 
+			complaintReviewedandPropogated:=2; 
+			complaintRejected:=3; 
+			complaintAssigned:=4; 
+			complaintResolved:=5; 
+			complaintAcknowledged:=6;
+	}
 	exit:{}
 	functions{
 		get_map<| A, B |>(amap : map<| A, B |>, k : A) : B; 
+	    put_map<| A, B |>(amap : map<| A, B |>, k : A, v : B) : map<| A, B |>;
+        remove_val_from_map<| A, B |>(amap : map<| A, B |>, k : A) : boolean;	
+		sizeOf<|A,B|>(amap:map<|A,B|>):int;
+		isNull<|A|>(a:A):boolean;
 	}
 	state LoggedOut{
 		uname#:string;
 		pass#:string;
 		enteredUser:User;
 		entry:{
-			admintype:=1;
-			studenttype:=2;
-			centraladmintype:=3;
-			centreheadtype:=4;
 		}
 		exit:{
 			enteredUser:=get_map<|string,User|>(registeredUsers,uname);
@@ -62,13 +81,63 @@ statechart hms{
 		loggedInUser:User;
 		state AdminModule{
 			state UserManagement{
-				state AddUser{
+				state UserAddition{
+					username#:string;
+					password#:string;
+					confirmpassword#:string;
+					contactno#:string;
+					emailID#:string;
+					usertype#:int;
+					newuser:User;
+					exit:{
+							newuser.username:=username;
+							newuser.password:=password;
+							newuser.contactno:=contactno;
+							newuser.usertype:=usertype;
+							newuser.emailID:=emailID;
+					}
 				}
-				state DeleteUser{
+				state UserDeletion{
+					username#:string;
 				}
 				state EnableUser{
 				}
 				state DisableUser{
+				}
+				transition UserAdditionDone{
+					source:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
+					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
+					trigger:eAddUser;
+					guard:isNull<|User|>(hms.LoggedIn.AdminModule.UserManagement.UserAddition.newuser);
+					action:{registeredUsers:=put_map<|string,User|>(registeredUsers,hms.LoggedIn.AdminModule.UserManagement.UserAddition.username,hms.LoggedIn.AdminModule.UserManagement.UserAddition.newuser);}
+				}
+				transition UserDeletion_UserAddition{
+					source:hms.LoggedIn.AdminModule.UserManagement.UserDeletion;
+					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
+					trigger:eAddUser;
+					guard:true;
+					action:{}
+				}
+				transition EnableUser_UserAddition{
+					source:hms.LoggedIn.AdminModule.UserManagement.EnableUser;
+					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
+					trigger:eAddUser;
+					guard:true;
+					action:{}
+				}
+				transition DisableUser_UserAddition{
+					source:hms.LoggedIn.AdminModule.UserManagement.DisableUser;
+					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
+					trigger:eAddUser;
+					guard:true;
+					action:{}
+				}
+				transition UserDeletionDone{
+					source:hms.LoggedIn.AdminModule.UserManagement.UserDeletion;
+					destination:hms.LoggedIn.AdminModule.UserManagement.UserDeletion;
+					trigger:eDeleteUser;
+					guard:(isNull<|string|>(hms.LoggedIn.AdminModule.UserManagement.UserDeletion.username)=false);
+					action:{remove_val_from_map<|string,User|>(registeredUsers,username);}
 				}
 			}
 			state SearchStudent{
