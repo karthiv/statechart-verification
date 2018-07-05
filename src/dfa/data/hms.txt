@@ -1,60 +1,153 @@
 statechart hms{
-types{
-type Date<| |>;
-struct Complaint{
-	id:int;
-	area:string;
-	area:string;
-	type:int;
-	roomNo:int;
-	blockNo:int;
-	startDate:Date;
-	status:string;
-}
+	types{
+		type Date<| |>;
+		type map<|A,B|>;
+		struct Complaint{
+			id:int;
+			complainttype:int;
+			roomNo:int;
+			blockNo:int;
+			startDate:Date;
+			status:int; //Launched=1, Reviewed and propogated=2, Rejected=3, Assigned=4, Resolved=5, Acknowledged=6
+			area:string;
+		}
+		struct Department{
+			id:int;
+			name:string;
+			incharge:string;
+			contactno:string;
+		}
+		struct User{
+			username:string;
+			password:string;
+			usertype:int; //admin=1;
+		}
+		struct EscalationPolicy{
+			level1Duration:int;
+			level2Duration:int;
+			level3Duration:int;
+			level1User:User;
+			level2User:User;
+			level3User:User;
+		}	
+	}
+	events{
+		eLogin;
+	}
+	registeredUsers:map<|string,User|>;
+	admintype:int;
+	studenttype:int;
+	entry:{}
+	exit:{}
+	functions{
+		get_map<| A, B |>(amap : map<| A, B |>, k : A) : B; 
+	}
+	state LoggedOut{
+		uname#:string;
+		pass#:string;
+		enteredUser:User;
+		entry:{
+			admintype:=1;
+			studenttype:=2;
+		}
+		exit:{
+			enteredUser:=get_map<|string,User|>(registeredUsers,uname);
+		}
+	}
+	state LoggedIn{
+	state AdminModule{
+		state UserManagement{
+			state AddUser{
+			}
+			state DeleteUser{
+			}
+			state EnableUser{
+			}
+			state DisableUser{
+			}
+		}
+		state SearchStudent{
+			state SearchByName{}
+			state SearchByRollNo{}
+		}
+		state ResolveComplaints{}
+		state ForwardComplaints{
+			toDepartment#:int;
+		}
+		state AddDepartment{
+		}
+		state HostelManagement{
+			state AllotRoom{
+			}
+			state AddWing{
+			}
+			state AddRoom{
+			}
+			state CloseRoom{
+			}
+		}
+		state SendGroupMessages{
+		}
+		state FineStudents{
+		}
+		state WorkerManagement{
+			inTime:Date;
+			outTime:Date;
+		}
+	}
+	state StudentModule{
+		state MakeRequest{
+			state ChangeRoom{}
+		}
+		state ScheduleHouseKeeping{
+			state EnterAvailability{
+			}
+			state EnterTimeTable{
+			}
+			state EnterVacation{
+			}
+		}
+		state FeesPayment{
+		}
+		state PayFine{
+		}
+		state ComplaintModule{
+			state MakeComplaints{
+				compliantPriority#:int;
+				problemStartDate#:Date;
+				complaintArea#:string;
+				state CleaningProblem{}
+				state HotWaterProblem{}
+				state DrinkingWaterProblem{}
+				state ElectricityProblem{}
+				state BrokenChairsBeds{}
+				state WiFiProblem{}
+				state NuisanceProblem{}		
+			}
+			state ViewComplaintStatus{}
+			state EscalateComplaint{}
+			state AcknowledgeComplaint{}
+		}
 
-}
-
-events{
-}
-entry:{}
-exit:{}
-functions{
-}
-state AdminModule{
-	state AddUser{
 	}
-	state DeleteUser{
+	state ViewEscalatedComplaints{
+		state SearchComplaints{
+		}
+		state ViewComplaints{
+		}
 	}
-	state EnableUser{
+	state CentralAdminModule{
+		state CreateEscalationPolicy{}
+		state ChangeEscalationPolicy{}
+		state EnableEscalationPolicy{}
+		state DisableEscalationPolicy{}
 	}
-	state DisableUser{
 	}
-	state SearchStudent{
-		state SearchByName{}
-		state SearchByRollNo{}
+	transition LoggedOut_LoggedIn_AdminModule{
+		source:hms.LoggedOut;
+		destination:hms.LoggedIn.AdminModule;
+		trigger:eLogin;
+		guard:(enteredUser.password=hms.LoggedOut.pass) && (enteredUser.usertype=admintype);
+		action:{}
 	}
-}
-state StudentModule{
-	state MakeRequest{
-		state ChangeRoom{}
-	}
-	state MakeComplaints{
-		compliantPriority#:int;
-		problemStartDate#:Date;
-		complaintArea#:string;
-		state CleaningProblem{}
-		state HotWaterProblem{}
-		state DrinkingWaterProblem{}
-		state ElectricityProblem{}
-		state BrokenChairsBeds{}
-		state WiFiProblem{}
-		state NuisanceProblem{}
-				
-	}
-	state ViewComplaintStatus{}
-	state EscalateComplaint{}
-	
-
-}
-
 }
