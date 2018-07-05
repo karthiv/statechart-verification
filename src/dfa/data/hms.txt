@@ -37,6 +37,8 @@ statechart hms{
 	registeredUsers:map<|string,User|>;
 	admintype:int;
 	studenttype:int;
+	centraladmintype:int;
+	centreheadtype:int;
 	entry:{}
 	exit:{}
 	functions{
@@ -49,105 +51,129 @@ statechart hms{
 		entry:{
 			admintype:=1;
 			studenttype:=2;
+			centraladmintype:=3;
+			centreheadtype:=4;
 		}
 		exit:{
 			enteredUser:=get_map<|string,User|>(registeredUsers,uname);
 		}
 	}
 	state LoggedIn{
-	state AdminModule{
-		state UserManagement{
-			state AddUser{
+		loggedInUser:User;
+		state AdminModule{
+			state UserManagement{
+				state AddUser{
+				}
+				state DeleteUser{
+				}
+				state EnableUser{
+				}
+				state DisableUser{
+				}
 			}
-			state DeleteUser{
+			state SearchStudent{
+				state SearchByName{}
+				state SearchByRollNo{}
 			}
-			state EnableUser{
+			state ResolveComplaints{}
+			state ForwardComplaints{
+				toDepartment#:int;
 			}
-			state DisableUser{
+			state AddDepartment{
 			}
-		}
-		state SearchStudent{
-			state SearchByName{}
-			state SearchByRollNo{}
-		}
-		state ResolveComplaints{}
-		state ForwardComplaints{
-			toDepartment#:int;
-		}
-		state AddDepartment{
-		}
-		state HostelManagement{
-			state AllotRoom{
+			state HostelManagement{
+				state AllotRoom{
+				}
+				state AddWing{
+				}
+				state AddRoom{
+				}
+				state CloseRoom{
+				}
 			}
-			state AddWing{
+			state SendGroupMessages{
 			}
-			state AddRoom{
+			state FineStudents{
 			}
-			state CloseRoom{
-			}
-		}
-		state SendGroupMessages{
-		}
-		state FineStudents{
-		}
-		state WorkerManagement{
-			inTime:Date;
-			outTime:Date;
-		}
-	}
-	state StudentModule{
-		state MakeRequest{
-			state ChangeRoom{}
-		}
-		state ScheduleHouseKeeping{
-			state EnterAvailability{
-			}
-			state EnterTimeTable{
-			}
-			state EnterVacation{
+			state WorkerManagement{
+				inTime:Date;
+				outTime:Date;
 			}
 		}
-		state FeesPayment{
-		}
-		state PayFine{
-		}
-		state ComplaintModule{
-			state MakeComplaints{
-				compliantPriority#:int;
-				problemStartDate#:Date;
-				complaintArea#:string;
-				state CleaningProblem{}
-				state HotWaterProblem{}
-				state DrinkingWaterProblem{}
-				state ElectricityProblem{}
-				state BrokenChairsBeds{}
-				state WiFiProblem{}
-				state NuisanceProblem{}		
+		state StudentModule{
+			state MakeRequest{
+				state ChangeRoom{}
 			}
-			state ViewComplaintStatus{}
-			state EscalateComplaint{}
-			state AcknowledgeComplaint{}
-		}
+			state ScheduleHouseKeeping{
+				state EnterAvailability{
+				}
+				state EnterTimeTable{
+				}
+				state EnterVacation{
+				}
+			}
+			state FeesPayment{
+			}
+			state PayFine{
+			}
+			state ComplaintModule{
+				state MakeComplaints{
+					compliantPriority#:int;
+					problemStartDate#:Date;
+					complaintArea#:string;
+					state CleaningProblem{}
+					state HotWaterProblem{}
+					state DrinkingWaterProblem{}
+					state ElectricityProblem{}
+					state BrokenChairsBeds{}
+					state WiFiProblem{}
+					state NuisanceProblem{}		
+				}
+				state ViewComplaintStatus{}
+				state EscalateComplaint{}
+				state AcknowledgeComplaint{}
+			}
 
-	}
-	state ViewEscalatedComplaints{
-		state SearchComplaints{
 		}
-		state ViewComplaints{
+		state ViewEscalatedComplaints{
+			state SearchComplaints{
+			}
+			state ViewComplaints{
+			}
 		}
-	}
-	state CentralAdminModule{
-		state CreateEscalationPolicy{}
-		state ChangeEscalationPolicy{}
-		state EnableEscalationPolicy{}
-		state DisableEscalationPolicy{}
-	}
-	}
-	transition LoggedOut_LoggedIn_AdminModule{
+		state CentralAdminModule{
+			state CreateEscalationPolicy{}
+			state ChangeEscalationPolicy{}
+			state EnableEscalationPolicy{}
+			state DisableEscalationPolicy{}
+		}
+		}
+		transition LoggedOut_LoggedIn_AdminModule{
+			source:hms.LoggedOut;
+			destination:hms.LoggedIn.AdminModule;
+			trigger:eLogin;
+			guard:(enteredUser.password=hms.LoggedOut.pass) && (enteredUser.usertype=admintype);
+			action:loggedInUser:=enteredUser;
+		}
+		transition LoggedOut_LoggedIn_StudentModule{
+			source:hms.LoggedOut;
+			destination:hms.LoggedIn.StudentModule;
+			trigger:eLogin;
+			guard:(enteredUser.password=hms.LoggedOut.pass) && (enteredUser.usertype=studenttype);
+			action:loggedInUser:=enteredUser;
+		}
+		transition LoggedOut_LoggedIn_CentralAdminModule{
+			source:hms.LoggedOut;
+			destination:hms.LoggedIn.CentralAdminModule;
+			trigger:eLogin;
+			guard:(enteredUser.password=hms.LoggedOut.pass) && (enteredUser.usertype=centraladmintype);
+			action:loggedInUser:=enteredUser;
+		}
+		transition LoggedOut_LoggedIn_EscalationModule{
 		source:hms.LoggedOut;
 		destination:hms.LoggedIn.AdminModule;
 		trigger:eLogin;
-		guard:(enteredUser.password=hms.LoggedOut.pass) && (enteredUser.usertype=admintype);
-		action:{}
+		guard:(enteredUser.password=hms.LoggedOut.pass) && (enteredUser.usertype=centreheadtype);
+		action:loggedInUser:=enteredUser;
 	}
 }
