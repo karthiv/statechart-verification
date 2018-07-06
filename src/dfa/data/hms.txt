@@ -83,6 +83,14 @@ statechart hms{
 		eManageUsers;
 		eManageWorkers;
 		eManageHostel;
+		eSendMessage;
+		eLevyFine;
+		eSendGroupMessagesDone;
+		eFineStudentsDone;
+		eResolveComplaint;
+		eResolveComplaintDone;
+		eForwardComplaint;
+		eForwardComplaintDone;
 	}
 	registeredUsers:map<|string,User|>;
 	students:map<|string,Student|>;
@@ -191,7 +199,7 @@ statechart hms{
 							}
 					}
 					
-			}
+				}
 				state ViewUsers{
 					username#:string;
 					selectedUser:User;
@@ -259,16 +267,91 @@ statechart hms{
 					}
 				}
 				state SendGroupMessages{
+					studList:List<|Student|>;
 				}
 				state FineStudents{
-			}
+				}
+				transition StudentSearch_SendGroupMessages{
+					source:hms.LoggedIn.AdminModule.StudentManagement.StudentSearch;
+					destination:hms.LoggedIn.AdminModule.StudentManagement.SendGroupMessages;
+					trigger:eSendMessage;
+					guard:true;
+					action:{}	
+				}
+				transition StudentSearch_FineStudents{
+					source:hms.LoggedIn.AdminModule.StudentManagement.StudentSearch;
+					destination:hms.LoggedIn.AdminModule.StudentManagement.FineStudents;
+					trigger:eLevyFine;
+					guard:true;
+					action:{}	
+				}
+				transition SendGroupMessages_StudentSearch{
+					source:hms.LoggedIn.AdminModule.StudentManagement.SendGroupMessages;
+					destination:hms.LoggedIn.AdminModule.StudentManagement.StudentSearch;
+					trigger:eSendGroupMessagesDone;
+					guard:true;
+					action:{}	
+				}
+				transition FineStudents_StudentSearch{
+					source:hms.LoggedIn.AdminModule.StudentManagement.FineStudents;
+					destination:hms.LoggedIn.AdminModule.StudentManagement.StudentSearch;
+					trigger:eFineStudentsDone;
+					guard:true;
+					action:{}	
+				}
 		}
 			state ComplaintManagement{
-			state ResolveComplaints{
-			}
-			state ForwardComplaints{
+				state ComplaintsView
+				{}
+				state ResolveComplaints{
+				}
+				state ForwardComplaints{
 				toDepartment#:int;
-			}
+				}
+				transition ResolveComplaints_ForwardComplaints{
+				source:hms.LoggedIn.AdminModule.ComplaintManagement.ResolveComplaints;
+				destination:hms.LoggedIn.AdminModule.ComplaintManagement.ForwardComplaints;
+				trigger:eForwardComplaint;
+				guard:true;
+				action:{}
+				}
+				transition ForwardComplaints_ResolveComplaints{
+				source:hms.LoggedIn.AdminModule.ComplaintManagement.ForwardComplaints;
+				destination:hms.LoggedIn.AdminModule.ComplaintManagement.ResolveComplaints;
+				trigger:eResolveComplaint;
+				guard:true;
+				action:{}
+				}
+				transition ComplaintsView_ForwardComplaints{
+				source:hms.LoggedIn.AdminModule.ComplaintManagement.ComplaintsView;
+				destination:hms.LoggedIn.AdminModule.ComplaintManagement.ForwardComplaints;
+				trigger:eForwardComplaint;
+				guard:true;
+				action:{}
+				}
+				transition ComplaintsView_ResolveComplaints{
+				source:hms.LoggedIn.AdminModule.ComplaintManagement.ComplaintsView;
+				destination:hms.LoggedIn.AdminModule.ComplaintManagement.ResolveComplaints;
+				trigger:eResolveComplaint;
+				guard:true;
+				action:{}
+				}
+				
+				transition ResolveComplaints_ComplaintView{
+				source:hms.LoggedIn.AdminModule.ComplaintManagement.ResolveComplaints;
+				destination:hms.LoggedIn.AdminModule.ComplaintManagement.ComplaintsView;
+				trigger:eResolveComplaintDone;
+				guard:true;
+				action:{}
+				}
+				transition ForwardComplaints_ComplaintView{
+				source:hms.LoggedIn.AdminModule.ComplaintManagement.ForwardComplaints;
+				destination:hms.LoggedIn.AdminModule.ComplaintManagement.ComplaintsView;
+				trigger:eForwardComplaintDone;
+				guard:true;
+				action:{}
+				}
+			
 			}
 			
 			state HostelManagement{
