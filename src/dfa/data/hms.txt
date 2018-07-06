@@ -98,6 +98,9 @@ statechart hms{
 		eEnableEscalationPolicy;
 		eDisableEscalationPolicy;
 		eCreateEscalationPolicyDone;
+		eViewSearchComplaints;
+		eViewComplaintDetail;
+		eViewEscalatedComplaints;
 	}
 	registeredUsers:map<|string,User|>;
 	students:map<|string,Student|>;
@@ -558,12 +561,7 @@ statechart hms{
 			}
 
 		}
-		state ViewEscalatedComplaints{
-			state SearchComplaints{
-			}
-			state ViewComplaints{
-			}
-		}
+		
 		state CentralAdminModule{ //transitions_done
 			state Dashboard{}
 			state CreateEscalationPolicy{
@@ -572,6 +570,26 @@ statechart hms{
 			state ChangeEscalationPolicy{}
 			state EnableEscalationPolicy{}
 			state DisableEscalationPolicy{}
+			state ViewEscalatedComplaints{
+				state SearchComplaints{
+				}
+				state ComplaintDetail{
+				}
+				transition SearchComplaints_ComplaintsDetail{
+					source:hms.LoggedIn.CentralAdminModule.ViewEscalatedComplaints.SearchComplaints;
+					destination:hms.LoggedIn.CentralAdminModule.ViewEscalatedComplaints.ComplaintDetail;
+					trigger:eViewComplaintDetail;
+					guard:true;
+					action:{}
+				}
+				transition ComplaintsDetail_SearchComplaints{
+					source:hms.LoggedIn.CentralAdminModule.ViewEscalatedComplaints.ComplaintDetail;
+					destination:hms.LoggedIn.CentralAdminModule.ViewEscalatedComplaints.SearchComplaints;
+					trigger:eViewSearchComplaints;
+					guard:true;
+					action:{}
+				}
+			}
 			transition Dashboard_CreateEscalationPolicy{
 				source:hms.LoggedIn.CentralAdminModule.Dashboard;
 				destination:hms.LoggedIn.CentralAdminModule.CreateEscalationPolicy;
@@ -606,6 +624,13 @@ statechart hms{
 				trigger:eDisableEscalationPolicy;
 				guard:isNull<|EscalationPolicy|>(policy)!=false && policy.enabled=true;
 				action:{policy.enabled=false;}
+			}
+			transition Dashboard_ViewEscalatedComplaints{
+				source:hms.LoggedIn.CentralAdminModule.Dashboard;
+				destination:hms.LoggedIn.CentralAdminModule.ViewEscalatedComplaints.SearchComplaints;
+				trigger:eViewEscalatedComplaints;
+				guard:true;
+				action:{}
 			}
 		}
 		}
