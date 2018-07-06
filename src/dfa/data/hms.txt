@@ -3,6 +3,7 @@ statechart hms{
 		type Date<| |>;
 		type DateTime<| |>;
 		type map<|A,B|>;
+		type List<|A|>;
 		struct Complaint{
 			id:int;
 			complainttype:int;
@@ -48,10 +49,16 @@ statechart hms{
 			inchargeOf:string;
 			userInfo:User;
 		}
+		struct Room{
+			roomno:int;
+			status:string;
+			capacity:int;
+		}
 		struct Wing{
 			wingname:string;
 			no_of_rooms:int;
 			wardendetail:Warden;
+			roomList:List<|Room|>;
 		}
 	}
 	events{
@@ -65,12 +72,15 @@ statechart hms{
 		eSearchStudentRollno;
 		eSearchStudentName;
 		eLogout;
+		eAddWing;
+		eAddRoom;
+		eCloseRoom;
 	}
 	registeredUsers:map<|string,User|>;
 	students:map<|string,Student|>;
 	wardens:map<|string,Warden|>;
 	complaints:map<|string, Complaint|>;
-	wings:map<|string,Warden|>;
+	wings:map<|string,Wing|>;
 	admintype:int;
 	studenttype:int; centraladmintype:int; centreheadtype:int; //usertype
 	complaintLaunched:int; 
@@ -100,6 +110,7 @@ statechart hms{
 		isNull<|A|>(a:A):boolean;
 		get_map_key_by_val<|A, B, C|>(amap : map<| A, B |>,v:C):A;
 		setNull<|A|>():A;
+		updateRoomStatus<||>(amap:map<|string,Wing|>,wing:string,roomno:int):boolean;
 	}
 	state LoggedOut{
 		uname#:string;
@@ -246,25 +257,64 @@ statechart hms{
 			state AddDepartment{
 			}
 			state HostelManagement{
-				
+				state Dashboard{}
 				state AllotRoom{
 					rollno#:string;
-					no#:int;
+					roomno#:int;
+					room:Room;
+					exit:{
+						//allotRoom(rollno,roomno,selectedWing);
+					}
 					state RoomSelection{
+						selectedWing#:string;
+						
 					}
 					state StudentSelection{
 					}
+					
 				}
-				state AddWing{
+				state WingAddition{
 					name#:string;
 				}
-				state AddRoom{
+				state RoomAddition{
 					no#:int;
 				}
 				state CloseRoom{
+					wing_name#:string;
 					no#:int;
+					room:Room;
 				}
-				
+				transition Dashboard_WingAddition{
+					source:hms.LoggedIn.AdminModule.HostelManagement.Dashboard;
+					destination:hms.LoggedIn.AdminModule.HostelManagement.WingAddition;
+					trigger:eAddWing;
+					guard:true;
+					action:{}
+				}
+				transition Dashboard_RoomAddition{
+					source:hms.LoggedIn.AdminModule.HostelManagement.Dashboard;
+					destination:hms.LoggedIn.AdminModule.HostelManagement.RoomAddition;
+					trigger:eAddRoom;
+					guard:true;
+					action:{}
+				}
+				transition Dashboard_CloseRoom{
+					source:hms.LoggedIn.AdminModule.HostelManagement.Dashboard;
+					destination:hms.LoggedIn.AdminModule.HostelManagement.CloseRoom;
+					trigger:eCloseRoom;
+					guard:true;
+					action:{}
+				}
+				transition CloseRoom_CloseRoom{
+					source:hms.LoggedIn.AdminModule.HostelManagement.CloseRoom;
+					destination:hms.LoggedIn.AdminModule.HostelManagement.CloseRoom;
+					trigger:eCloseRoom;
+					guard:isNull<|int|>(no)!=false && isNull<|string|>(wing_name);
+					action:{
+					room.status:="closed";
+					updateRoomStatus<||>(wings,wing_name,no);
+					}
+				}
 			}
 			state SendGroupMessages{
 			}
