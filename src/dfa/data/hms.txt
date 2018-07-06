@@ -275,6 +275,10 @@ statechart hms{
 				}
 				state WingAddition{
 					name#:string;
+					newwing:Wing;
+					entry:{
+						newwing.wingname:=name;
+					}
 				}
 				state RoomAddition{
 					no#:int;
@@ -290,6 +294,15 @@ statechart hms{
 					trigger:eAddWing;
 					guard:true;
 					action:{}
+				}
+				transition WingAddition_WingAddition{
+					source:hms.LoggedIn.AdminModule.HostelManagement.WingAddition;
+					destination:hms.LoggedIn.AdminModule.HostelManagement.WingAddition;
+					trigger:eAddWing;
+					guard:isNull<|string|>(name)!=false;
+					action:{
+					wings:=put_map<|string,Wing|>(wings,name,newwing);
+					}
 				}
 				transition Dashboard_RoomAddition{
 					source:hms.LoggedIn.AdminModule.HostelManagement.Dashboard;
