@@ -75,6 +75,14 @@ statechart hms{
 		eAddWing;
 		eAddRoom;
 		eCloseRoom;
+		eAllotRoom;
+		eSelectRoomToAllotStudent;
+		eSelectStudentToAllotRoom;
+		eManageComplaints;
+		eManageStudents;
+		eManageUsers;
+		eManageWorkers;
+		eManageHostel;
 	}
 	registeredUsers:map<|string,User|>;
 	students:map<|string,Student|>;
@@ -125,6 +133,7 @@ statechart hms{
 	state LoggedIn{
 		loggedInUser:User;
 		state AdminModule{
+			state Dashboard{}
 			state UserManagement{
 				state UserAddition{
 					username#:string;
@@ -217,48 +226,54 @@ statechart hms{
 					action:{}
 				}				
 			}
-			
-			state SearchStudent{
-				selectedStudent:Student;
-				key:string;
-				state Search{}
-				state SearchByName{
-					name#:string;
-					exit:{
-					key:=get_map_key_by_val<|string,Student,string|>(students,name);
+			state StudentManagement{
+				state StudentSearch{
+					selectedStudent:Student;
+					key:string;
+					state Search{}
+					state SearchByName{
+						name#:string;
+						exit:{
+						key:=get_map_key_by_val<|string,Student,string|>(students,name);
+						}
+					}
+					state SearchByRollNo{
+						no#:string;
+						exit:{
+						key:=get_map_key_by_val<|string,Student,string|>(students,no);
+						}
+					}
+					transition Search_SearchByName{
+						source:hms.LoggedIn.AdminModule.StudentManagement.StudentSearch.Search;
+						destination: hms.LoggedIn.AdminModule.StudentManagement.StudentSearch.SearchByName;
+						trigger: eSearchStudentName;
+						guard:isNull<|string|>(key)!=false;
+						action:{selectedStudent:=get_map<|string,Student|>(students,key);}
+					}
+					transition Search_SearchByRollNo{
+						source: hms.LoggedIn.AdminModule.StudentManagement.StudentSearch.Search;
+						destination: hms.LoggedIn.AdminModule.StudentManagement.StudentSearch.SearchByRollNo;
+						trigger: eSearchStudentRollno;
+						guard:isNull<|string|>(key)!=false;
+						action:{selectedStudent:=get_map<|string,Student|>(students,key);}
 					}
 				}
-				state SearchByRollNo{
-					no#:string;
-					exit:{
-					key:=get_map_key_by_val<|string,Student,string|>(students,no);
-					}
+				state SendGroupMessages{
 				}
-				transition Search_SearchByName{
-					source:hms.LoggedIn.AdminModule.SearchStudent.Search;
-					destination: hms.LoggedIn.AdminModule.SearchStudent.SearchByName;
-					trigger: eSearchStudentName;
-					guard:isNull<|string|>(key)!=false;
-					action:{selectedStudent:=get_map<|string,Student|>(students,key);}
-				}
-				transition Search_SearchByRollNo{
-					source: hms.LoggedIn.AdminModule.SearchStudent.Search;
-					destination: hms.LoggedIn.AdminModule.SearchStudent.SearchByRollNo;
-					trigger: eSearchStudentRollno;
-					guard:isNull<|string|>(key)!=false;
-					action:{selectedStudent:=get_map<|string,Student|>(students,key);}
-				}
+				state FineStudents{
 			}
+		}
+			state ComplaintManagement{
 			state ResolveComplaints{
 			}
 			state ForwardComplaints{
 				toDepartment#:int;
 			}
-			state AddDepartment{
 			}
+			
 			state HostelManagement{
 				state Dashboard{}
-				state AllotRoom{
+				state RoomAllotment{
 					rollno#:string;
 					roomno#:int;
 					room:Room;
@@ -271,7 +286,20 @@ statechart hms{
 					}
 					state StudentSelection{
 					}
-					
+					transition RoomSelection_StudentSelection{
+						source:hms.LoggedIn.AdminModule.HostelManagement.RoomAllotment.RoomSelection;
+						destination:hms.LoggedIn.AdminModule.HostelManagement.RoomAllotment.StudentSelection;
+						trigger:eSelectStudentToAllotRoom;
+						guard:true;
+						action:{}
+					}
+					transition StudentSelection_RoomSelection{
+						source:hms.LoggedIn.AdminModule.HostelManagement.RoomAllotment.StudentSelection;
+						destination:hms.LoggedIn.AdminModule.HostelManagement.RoomAllotment.RoomSelection;
+						trigger:eSelectRoomToAllotStudent;
+						guard:true;
+						action:{}
+					}
 				}
 				state WingAddition{
 					name#:string;
@@ -311,6 +339,13 @@ statechart hms{
 					guard:true;
 					action:{}
 				}
+				transition RoomAddition_RoomAddition{
+					source:hms.LoggedIn.AdminModule.HostelManagement.Dashboard;
+					destination:hms.LoggedIn.AdminModule.HostelManagement.RoomAddition;
+					trigger:eAddRoom;
+					guard:true;
+					action:{}
+				}
 				transition Dashboard_CloseRoom{
 					source:hms.LoggedIn.AdminModule.HostelManagement.Dashboard;
 					destination:hms.LoggedIn.AdminModule.HostelManagement.CloseRoom;
@@ -328,15 +363,66 @@ statechart hms{
 					updateRoomStatus<||>(wings,wing_name,no);
 					}
 				}
+				transition Dashboard_RoomAllotment{
+				source:hms.LoggedIn.AdminModule.HostelManagement.Dashboard;
+					destination:hms.LoggedIn.AdminModule.HostelManagement.RoomAllotment;
+					trigger:eAllotRoom;
+					guard:true;
+					action:{}
+				}
+				transition RoomAllotment_RoomAllotment{
+					source:hms.LoggedIn.AdminModule.HostelManagement.RoomAllotment;
+					destination:hms.LoggedIn.AdminModule.HostelManagement.RoomAllotment;
+					trigger:eAllotRoom;
+					guard:true;
+					action:{}
+				}
 			}
-			state SendGroupMessages{
-			}
-			state FineStudents{
-			}
+			
 			state WorkerManagement{
 				inTime:Date;
 				outTime:Date;
+				state AddDepartment{
+				departmentName#:string;
+				}
 			}
+			transition Dashboard_UserManagement{
+				source:hms.LoggedIn.AdminModule.Dashboard;
+				destination:hms.LoggedIn.AdminModule.UserManagement;
+				trigger:eManageUsers;
+				guard:true;
+				action:{}
+			}
+			transition Dashboard_ComplaintManagement{
+				source:hms.LoggedIn.AdminModule.Dashboard;
+				destination:hms.LoggedIn.AdminModule.ComplaintManagement;
+				trigger:eManageComplaints;
+				guard:true;
+				action:{}
+			}
+			transition Dashboard_HostelManagement{
+				source:hms.LoggedIn.AdminModule.Dashboard;
+				destination:hms.LoggedIn.AdminModule.HostelManagement;
+				trigger:eManageHostel;
+				guard:true;
+				action:{}
+			}
+			transition Dashboard_StudentManagement{
+				source:hms.LoggedIn.AdminModule.Dashboard;
+				destination:hms.LoggedIn.AdminModule.StudentManagement;
+				trigger:eManageStudents;
+				guard:true;
+				action:{}
+			}
+			transition Dashboard_WorkerManagement{
+				source:hms.LoggedIn.AdminModule.Dashboard;
+				destination:hms.LoggedIn.AdminModule.WorkerManagement;
+				trigger:eManageWorkers;
+				guard:true;
+				action:{}
+			}
+		
+		
 		}
 		state StudentModule{
 			state MakeRequest{
