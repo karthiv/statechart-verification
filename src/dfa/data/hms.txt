@@ -34,6 +34,7 @@ statechart hms{
 			level1User:User;
 			level2User:User;
 			level3User:User;
+			enabled:boolean;
 		}
 		struct Student{
 			rollNo:string;
@@ -91,12 +92,19 @@ statechart hms{
 		eResolveComplaintDone;
 		eForwardComplaint;
 		eForwardComplaintDone;
+		eViewUsers;
+		eCreateEscalationPolicy;
+		eChangeEscalationPolicy;
+		eEnableEscalationPolicy;
+		eDisableEscalationPolicy;
+		eCreateEscalationPolicyDone;
 	}
 	registeredUsers:map<|string,User|>;
 	students:map<|string,Student|>;
 	wardens:map<|string,Warden|>;
 	complaints:map<|string, Complaint|>;
 	wings:map<|string,Wing|>;
+	policy:EscalationPolicy;
 	admintype:int;
 	studenttype:int; centraladmintype:int; centreheadtype:int; //usertype
 	complaintLaunched:int; 
@@ -142,7 +150,7 @@ statechart hms{
 		loggedInUser:User;
 		state AdminModule{
 			state Dashboard{}
-			state UserManagement{
+			state UserManagement{ //Done
 				state UserAddition{
 					username#:string;
 					password#:string;
@@ -225,7 +233,13 @@ statechart hms{
 						guard:(isNull<|string|>(username)=false);
 						action:{selectedUser:=get_map<|string,User|>(registeredUsers,username);selectedUser.enabled:=false;}
 				}
-				
+				transition UserAddition_ViewUsers{
+					source:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
+					destination:hms.LoggedIn.AdminModule.UserManagement.ViewUsers;
+					trigger:eViewUsers;
+					guard:true;
+					action:{}
+				}	
 				transition ViewUsers_UserAddition{
 					source:hms.LoggedIn.AdminModule.UserManagement.ViewUsers;
 					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
@@ -234,7 +248,7 @@ statechart hms{
 					action:{}
 				}				
 			}
-			state StudentManagement{
+			state StudentManagement{ //Done
 				state StudentSearch{
 					selectedStudent:Student;
 					key:string;
@@ -300,7 +314,7 @@ statechart hms{
 					action:{}	
 				}
 		}
-			state ComplaintManagement{
+			state ComplaintManagement{ //Done
 				state ComplaintsView
 				{}
 				state ResolveComplaints{
@@ -354,7 +368,7 @@ statechart hms{
 			
 			}
 			
-			state HostelManagement{
+			state HostelManagement{ //Done
 				state Dashboard{}
 				state RoomAllotment{
 					rollno#:string;
@@ -468,6 +482,10 @@ statechart hms{
 				state AddDepartment{
 				departmentName#:string;
 				}
+				state SelectDepartment{
+				}
+				state ViewWorkers{
+				}
 			}
 			transition Dashboard_UserManagement{
 				source:hms.LoggedIn.AdminModule.Dashboard;
@@ -503,9 +521,7 @@ statechart hms{
 				trigger:eManageWorkers;
 				guard:true;
 				action:{}
-			}
-		
-		
+			}	
 		}
 		state StudentModule{
 			state MakeRequest{
@@ -548,11 +564,49 @@ statechart hms{
 			state ViewComplaints{
 			}
 		}
-		state CentralAdminModule{
-			state CreateEscalationPolicy{}
+		state CentralAdminModule{ //transitions_done
+			state Dashboard{}
+			state CreateEscalationPolicy{
+				newpolicy:EscalationPolicy;
+			}
 			state ChangeEscalationPolicy{}
 			state EnableEscalationPolicy{}
 			state DisableEscalationPolicy{}
+			transition Dashboard_CreateEscalationPolicy{
+				source:hms.LoggedIn.CentralAdminModule.Dashboard;
+				destination:hms.LoggedIn.CentralAdminModule.CreateEscalationPolicy;
+				trigger:eCreateEscalationPolicy;
+				guard:isNull<|EscalationPolicy|>(policy)=true;
+				action:{}
+			}
+			transition CreateEscalationPolicy_Done{
+				source:hms.LoggedIn.CentralAdminModule.CreateEscalationPolicy;
+				destination:hms.LoggedIn.CentralAdminModule.Dashboard;
+				trigger:eCreateEscalationPolicyDone;
+				guard:isNull<|EscalationPolicy|>(newpolicy)=true;
+				action:{policy:=newpolicy;}
+			}
+			transition Dashboard_ChangeEscalationPolicy{
+				source:hms.LoggedIn.CentralAdminModule.Dashboard;
+				destination:hms.LoggedIn.CentralAdminModule.ChangeEscalationPolicy;
+				trigger:eChangeEscalationPolicy;
+				guard:isNull<|EscalationPolicy|>(policy)!=false;
+				action:{}
+			}
+			transition Dashboard_EnableEscalationPolicy{
+				source:hms.LoggedIn.CentralAdminModule.Dashboard;
+				destination:hms.LoggedIn.CentralAdminModule.EnableEscalationPolicy;
+				trigger:eEnableEscalationPolicy;
+				guard:isNull<|EscalationPolicy|>(policy)!=false && policy.enabled=false;
+				action:{policy.enabled=true;}
+			}
+			transition Dashboard_DisableEscalationPolicy{
+				source:hms.LoggedIn.CentralAdminModule.Dashboard;
+				destination:hms.LoggedIn.CentralAdminModule.DisableEscalationPolicy;
+				trigger:eDisableEscalationPolicy;
+				guard:isNull<|EscalationPolicy|>(policy)!=false && policy.enabled=true;
+				action:{policy.enabled=false;}
+			}
 		}
 		}
 		transition LoggedOut_LoggedIn_AdminModule{
