@@ -1,6 +1,7 @@
 statechart hms{
 	types{
 		type Date<| |>;
+		type DateTime<| |>;
 		type map<|A,B|>;
 		struct Complaint{
 			id:int;
@@ -23,6 +24,7 @@ statechart hms{
 			usertype:int; //admin=1;
 			contactno:string;
 			emailID:string;
+			enabled:boolean;
 		}
 		struct EscalationPolicy{
 			level1Duration:int;
@@ -31,14 +33,44 @@ statechart hms{
 			level1User:User;
 			level2User:User;
 			level3User:User;
-		}	
+		}
+		struct Student{
+			rollNo:string;
+			batch:string;
+			availabilityFrom:DateTime;
+			availabilityTo:DateTime;
+			department:string;
+			userInfo:User;
+			roomNo:int;
+			wingName:string;
+		}
+		struct Warden{
+			inchargeOf:string;
+			userInfo:User;
+		}
+		struct Wing{
+			wingname:string;
+			no_of_rooms:int;
+			wardendetail:Warden;
+		}
 	}
 	events{
 		eLogin;
-		eAddUser;
+		eAddStudent;
+		eAddWarden;
 		eDeleteUser;
+		eEnableUser;
+		eDisableUser;
+		eAddUser;
+		eSearchStudentRollno;
+		eSearchStudentName;
+		eLogout;
 	}
 	registeredUsers:map<|string,User|>;
+	students:map<|string,Student|>;
+	wardens:map<|string,Warden|>;
+	complaints:map<|string, Complaint|>;
+	wings:map<|string,Warden|>;
 	admintype:int;
 	studenttype:int; centraladmintype:int; centreheadtype:int; //usertype
 	complaintLaunched:int; 
@@ -66,6 +98,8 @@ statechart hms{
         remove_val_from_map<| A, B |>(amap : map<| A, B |>, k : A) : boolean;	
 		sizeOf<|A,B|>(amap:map<|A,B|>):int;
 		isNull<|A|>(a:A):boolean;
+		get_map_key_by_val<|A, B, C|>(amap : map<| A, B |>,v:C):A;
+		setNull<|A|>():A;
 	}
 	state LoggedOut{
 		uname#:string;
@@ -96,69 +130,141 @@ statechart hms{
 							newuser.usertype:=usertype;
 							newuser.emailID:=emailID;
 					}
-				}
-				state UserDeletion{
+					state StudentAddition{
+						rno#:string;
+						batchOfJoining#:string;
+						department#:string;
+						stud:Student;
+						exit:{
+							stud.rollNo:=rno;
+							stud.department:=department;
+							stud.batch:=batchOfJoining;
+						}
+					}
+					state WardenAddition{
+						buildingIncharge#:string;
+						w:Warden;
+						exit:{
+							w.inchargeOf:=buildingIncharge;
+						}
+					}
+					transition StudentAdditionDone{
+					source:hms.LoggedIn.AdminModule.UserManagement.UserAddition.StudentAddition;
+					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition.StudentAddition;
+					trigger:eAddStudent;
+					guard:isNull<|User|>(newuser)=false && isNull<|Student|>(stud);
+					action:{
+							stud.userInfo:=newuser;
+							students:=put_map<|string,Student|>(students,username,stud);
+							registeredUsers:=put_map<|string,User|>(registeredUsers,username,newuser);
+							}
+					}
+					transition WardenAdditionDone{
+					source:hms.LoggedIn.AdminModule.UserManagement.UserAddition.WardenAddition;
+					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition.WardenAddition;
+					trigger:eAddWarden;
+					guard:isNull<|User|>(newuser)=false && isNull<|Warden|>(w);
+					action:{
+							w.userInfo:=newuser;
+							wardens:=put_map<|string,Warden|>(wardens,username,w);
+							registeredUsers:=put_map<|string,User|>(registeredUsers,username,newuser);
+							}
+					}
+					
+			}
+				state ViewUsers{
 					username#:string;
-				}
-				state EnableUser{
-				}
-				state DisableUser{
-				}
-				transition UserAdditionDone{
-					source:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
-					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
-					trigger:eAddUser;
-					guard:isNull<|User|>(hms.LoggedIn.AdminModule.UserManagement.UserAddition.newuser);
-					action:{registeredUsers:=put_map<|string,User|>(registeredUsers,hms.LoggedIn.AdminModule.UserManagement.UserAddition.username,hms.LoggedIn.AdminModule.UserManagement.UserAddition.newuser);}
-				}
-				transition UserDeletion_UserAddition{
-					source:hms.LoggedIn.AdminModule.UserManagement.UserDeletion;
-					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
-					trigger:eAddUser;
-					guard:true;
-					action:{}
-				}
-				transition EnableUser_UserAddition{
-					source:hms.LoggedIn.AdminModule.UserManagement.EnableUser;
-					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
-					trigger:eAddUser;
-					guard:true;
-					action:{}
-				}
-				transition DisableUser_UserAddition{
-					source:hms.LoggedIn.AdminModule.UserManagement.DisableUser;
-					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
-					trigger:eAddUser;
-					guard:true;
-					action:{}
+					selectedUser:User;
 				}
 				transition UserDeletionDone{
-					source:hms.LoggedIn.AdminModule.UserManagement.UserDeletion;
-					destination:hms.LoggedIn.AdminModule.UserManagement.UserDeletion;
-					trigger:eDeleteUser;
-					guard:(isNull<|string|>(hms.LoggedIn.AdminModule.UserManagement.UserDeletion.username)=false);
-					action:{remove_val_from_map<|string,User|>(registeredUsers,username);}
+						source:hms.LoggedIn.AdminModule.UserManagement.ViewUsers;
+						destination:hms.LoggedIn.AdminModule.UserManagement.ViewUsers;
+						trigger:eDeleteUser;
+						guard:(isNull<|string|>(username)=false);
+						action:{remove_val_from_map<|string,User|>(registeredUsers,username);}
+				}
+				transition EnableUserDone{
+						source:hms.LoggedIn.AdminModule.UserManagement.ViewUsers;
+						destination:hms.LoggedIn.AdminModule.UserManagement.ViewUsers;
+						trigger:eEnableUser;
+						guard:(isNull<|string|>(username)=false);
+						action:{selectedUser:=get_map<|string,User|>(registeredUsers,username);selectedUser.enabled:=true;}
+				}
+				transition DisableUserDone{
+						source:hms.LoggedIn.AdminModule.UserManagement.ViewUsers;
+						destination:hms.LoggedIn.AdminModule.UserManagement.ViewUsers;
+						trigger:eDisableUser;
+						guard:(isNull<|string|>(username)=false);
+						action:{selectedUser:=get_map<|string,User|>(registeredUsers,username);selectedUser.enabled:=false;}
+				}
+				
+				transition ViewUsers_UserAddition{
+					source:hms.LoggedIn.AdminModule.UserManagement.ViewUsers;
+					destination:hms.LoggedIn.AdminModule.UserManagement.UserAddition;
+					trigger:eAddUser;
+					guard:true;
+					action:{}
+				}				
+			}
+			
+			state SearchStudent{
+				selectedStudent:Student;
+				key:string;
+				state Search{}
+				state SearchByName{
+					name#:string;
+					exit:{
+					key:=get_map_key_by_val<|string,Student,string|>(students,name);
+					}
+				}
+				state SearchByRollNo{
+					no#:string;
+					exit:{
+					key:=get_map_key_by_val<|string,Student,string|>(students,no);
+					}
+				}
+				transition Search_SearchByName{
+					source:hms.LoggedIn.AdminModule.SearchStudent.Search;
+					destination: hms.LoggedIn.AdminModule.SearchStudent.SearchByName;
+					trigger: eSearchStudentName;
+					guard:isNull<|string|>(key)!=false;
+					action:{selectedStudent:=get_map<|string,Student|>(students,key);}
+				}
+				transition Search_SearchByRollNo{
+					source: hms.LoggedIn.AdminModule.SearchStudent.Search;
+					destination: hms.LoggedIn.AdminModule.SearchStudent.SearchByRollNo;
+					trigger: eSearchStudentRollno;
+					guard:isNull<|string|>(key)!=false;
+					action:{selectedStudent:=get_map<|string,Student|>(students,key);}
 				}
 			}
-			state SearchStudent{
-				state SearchByName{}
-				state SearchByRollNo{}
+			state ResolveComplaints{
 			}
-			state ResolveComplaints{}
 			state ForwardComplaints{
 				toDepartment#:int;
 			}
 			state AddDepartment{
 			}
 			state HostelManagement{
+				
 				state AllotRoom{
+					rollno#:string;
+					no#:int;
+					state RoomSelection{
+					}
+					state StudentSelection{
+					}
 				}
 				state AddWing{
+					name#:string;
 				}
 				state AddRoom{
+					no#:int;
 				}
 				state CloseRoom{
+					no#:int;
 				}
+				
 			}
 			state SendGroupMessages{
 			}
@@ -221,28 +327,35 @@ statechart hms{
 			source:hms.LoggedOut;
 			destination:hms.LoggedIn.AdminModule;
 			trigger:eLogin;
-			guard:(enteredUser.password=hms.LoggedOut.pass) && (enteredUser.usertype=admintype);
+			guard:(enteredUser.password=pass) && (enteredUser.usertype=admintype);
 			action:loggedInUser:=enteredUser;
 		}
 		transition LoggedOut_LoggedIn_StudentModule{
 			source:hms.LoggedOut;
 			destination:hms.LoggedIn.StudentModule;
 			trigger:eLogin;
-			guard:(enteredUser.password=hms.LoggedOut.pass) && (enteredUser.usertype=studenttype);
+			guard:(enteredUser.password=pass) && (enteredUser.usertype=studenttype);
 			action:loggedInUser:=enteredUser;
 		}
 		transition LoggedOut_LoggedIn_CentralAdminModule{
 			source:hms.LoggedOut;
 			destination:hms.LoggedIn.CentralAdminModule;
 			trigger:eLogin;
-			guard:(enteredUser.password=hms.LoggedOut.pass) && (enteredUser.usertype=centraladmintype);
+			guard:(enteredUser.password=pass) && (enteredUser.usertype=centraladmintype);
 			action:loggedInUser:=enteredUser;
 		}
 		transition LoggedOut_LoggedIn_EscalationModule{
-		source:hms.LoggedOut;
-		destination:hms.LoggedIn.AdminModule;
-		trigger:eLogin;
-		guard:(enteredUser.password=hms.LoggedOut.pass) && (enteredUser.usertype=centreheadtype);
-		action:loggedInUser:=enteredUser;
-	}
+			source:hms.LoggedOut;
+			destination:hms.LoggedIn.AdminModule;
+			trigger:eLogin;
+			guard:(enteredUser.password=pass) && (enteredUser.usertype=centreheadtype);
+			action:loggedInUser:=enteredUser;
+		}
+		transition LoggedIn_LoggedOut{
+			source:hms.LoggedIn;
+			destination:hms.LoggedOut;
+			trigger:eLogout;
+			guard:true;
+			action:{uname:="";pass:="";enteredUser:=setNull<|User|>();}
+		}
 }
