@@ -1,4 +1,5 @@
 statechart hms{
+	//54 states - 60 transitions
 	types{
 		type Date<| |>;
 		type DateTime<| |>;
@@ -101,6 +102,17 @@ statechart hms{
 		eViewSearchComplaints;
 		eViewComplaintDetail;
 		eViewEscalatedComplaints;
+		eAddDepartment;
+		eViewWorker;
+		eEnterTimetable;
+		eEnterVacation;
+		eChangeRoom;
+		ePayFees;
+		ePayFine;
+		eMakeComplaint;
+		eAcknowledgeComplaint;
+		eEscalateComplaint;
+		eViewComplaintStatus;
 	}
 	registeredUsers:map<|string,User|>;
 	students:map<|string,Student|>;
@@ -151,7 +163,7 @@ statechart hms{
 	}
 	state LoggedIn{
 		loggedInUser:User;
-		state AdminModule{
+		state AdminModule{ //done
 			state Dashboard{}
 			state UserManagement{ //Done
 				state UserAddition{
@@ -479,15 +491,33 @@ statechart hms{
 				}
 			}
 			
-			state WorkerManagement{
+			state WorkerManagement{ //transitions_done
 				inTime:Date;
 				outTime:Date;
-				state AddDepartment{
-				departmentName#:string;
+				state WorkersView{
+					departmentid#:string;
 				}
-				state SelectDepartment{
+				state DepartmentAddition{
+					departmentName#:string;
+					departmentHeadID#:string;
+					entry:{
+					
+					}
 				}
-				state ViewWorkers{
+				transition WorkersView_DepartmentAddition{
+					source:hms.LoggedIn.AdminModule.WorkerManagement.WorkersView;
+					destination:hms.LoggedIn.AdminModule.WorkerManagement.DepartmentAddition;
+					trigger:eAddDepartment;
+					guard:true;
+					action:{}
+				}
+				transition DepartmentAddition_WorkerView{
+					source:hms.LoggedIn.AdminModule.WorkerManagement.DepartmentAddition;
+					destination:hms.LoggedIn.AdminModule.WorkerManagement.WorkersView;
+					trigger:eViewWorker;
+					guard:true;
+					action:{}
+					
 				}
 			}
 			transition Dashboard_UserManagement{
@@ -527,15 +557,18 @@ statechart hms{
 			}	
 		}
 		state StudentModule{
-			state MakeRequest{
+				state Dashboard{}
 				state ChangeRoom{}
-			}
+			
 			state ScheduleHouseKeeping{
-				state EnterAvailability{
+				state AvailabilityCalculation{
+					
 				}
 				state EnterTimeTable{
 				}
 				state EnterVacation{
+					inTime:DateTime;
+					outTime:DateTime;
 				}
 			}
 			state FeesPayment{
@@ -547,19 +580,90 @@ statechart hms{
 					compliantPriority#:int;
 					problemStartDate#:Date;
 					complaintArea#:string;
-					state CleaningProblem{}
-					state HotWaterProblem{}
-					state DrinkingWaterProblem{}
-					state ElectricityProblem{}
-					state BrokenChairsBeds{}
-					state WiFiProblem{}
-					state NuisanceProblem{}		
+					complaintDescription#:string;
+					//state CleaningProblem{}
+					//state HotWaterProblem{}
+					//state DrinkingWaterProblem{}
+					//state ElectricityProblem{}
+					//state BrokenChairsBeds{}
+					//state WiFiProblem{}
+					//state NuisanceProblem{}		
 				}
-				state ViewComplaintStatus{}
-				state EscalateComplaint{}
-				state AcknowledgeComplaint{}
+				state ViewComplaintStatus{
+					
+				}
+				state EscalateComplaint{
+					
+				}
+				state AcknowledgeComplaint{
+					
+				}
+				transition MakeComplaints_ViewComplaintStatus{
+					source: hms.LoggedIn.StudentModule.ComplaintModule.MakeComplaints;
+					destination:hms.LoggedIn.StudentModule.ComplaintModule.ViewComplaintStatus;
+					trigger:eViewComplaintStatus;
+					guard:true;
+					action:{}
+				}
+				transition ViewComplaintStatus_EscalateComplaint{
+					source:hms.LoggedIn.StudentModule.ComplaintModule.ViewComplaintStatus;
+					destination: hms.LoggedIn.StudentModule.ComplaintModule.EscalateComplaint;
+					trigger:eEscalateComplaint;
+					guard:true;
+					action:{}
+				}
+				transition ViewComplaintStatus_AcknowledgeComplaint{
+					source:hms.LoggedIn.StudentModule.ComplaintModule.ViewComplaintStatus;
+					destination: hms.LoggedIn.StudentModule.ComplaintModule.AcknowledgeComplaint;
+					trigger:eAcknowledgeComplaint;
+					guard:true;
+					action:{}
+				}
+				transition ViewComplaintStatus_MakeComplaints{
+					source:hms.LoggedIn.StudentModule.ComplaintModule.ViewComplaintStatus;
+					
+					destination: hms.LoggedIn.StudentModule.ComplaintModule.MakeComplaints;
+					trigger:eMakeComplaint;
+					guard:true;
+					action:{}
+				}
 			}
-
+			transition ChangeRoomRequest{
+				source:hms.LoggedIn.StudentModule.Dashboard;
+				destination:hms.LoggedIn.StudentModule.ChangeRoom;
+				trigger:eChangeRoom;
+				guard:true;
+				action:{}
+			}
+			transition Dashboard_EnterTimeTable{
+				source:hms.LoggedIn.StudentModule.Dashboard;
+				destination:hms.LoggedIn.StudentModule.ScheduleHouseKeeping.EnterTimeTable;
+				trigger:eEnterTimetable;
+				guard:true;
+				action:{}
+				
+			}
+			transition Dashboard_EnterVacation{
+				source:hms.LoggedIn.StudentModule.Dashboard;
+				destination:hms.LoggedIn.StudentModule.ScheduleHouseKeeping.EnterVacation;
+				trigger:eEnterVacation;
+				guard:true;
+				action:{}	
+			}
+			transition payfees{
+				source:hms.LoggedIn.StudentModule.Dashboard;
+				destination:hms.LoggedIn.StudentModule.FeesPayment;
+				trigger:ePayFees;
+				guard:true;
+				action:{}
+			}
+			transition finepayment{
+				source:hms.LoggedIn.StudentModule.Dashboard;
+				destination:hms.LoggedIn.StudentModule.PayFine;
+				trigger:ePayFine;
+				guard:true;
+				action:{}
+			}
 		}
 		
 		state CentralAdminModule{ //transitions_done
